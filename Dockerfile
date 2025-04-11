@@ -58,6 +58,9 @@ RUN pip install --no-cache-dir .
 RUN pip uninstall -y transformer_engine || true
 RUN pip install --no-cache-dir transformer_engine[pytorch]==1.13
 
+# Inside Dockerfile
+RUN pip install flash-attn --no-build-isolation
+
 # Verify installation by trying to import (optional)
 # RUN python3 -c "import evo2; import transformer_engine; print('evo2 and transformer_engine imported successfully')"
 
