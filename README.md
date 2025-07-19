@@ -37,18 +37,20 @@ Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://git
 **Prerequisites**
 - [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) >= 2.0.0
 - [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) for optimized attention operations (strongly recommended)
+
 **System requirements**
 - [OS] Linux (official) or WSL2 (limited support)
 - [CUDA] 12.1+ (12.8+ for Blackwell) with compatible NVIDIA drivers
 - [GPU] Requires Compute Capability 8.9+ (Ada/Hopper/Blackwell) due to FP8 being required
 - [Python] 3.12 recommended
-See [Transformer Engine](https://github.com/NVIDIA/TransformerEngine?tab=readme-ov-file#system-requirements) for more details on system requirements.
+  
+Check respective githubs for more details about [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) and [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) and system requirements.
 
 ### Installation
 
 To get started with Evo 2, install from pip or from github after installing the prerequisites.
 
-We recommend using a conda environment to easily install Transformer Engine. To install the prerequisites:
+We recommend using conda to easily install Transformer Engine. Here is an example of how to install the prerequisites:
 
 ```bash
 conda install -c conda-forge transformer-engine-torch=2.3.0
