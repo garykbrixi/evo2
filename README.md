@@ -32,44 +32,43 @@ information.
 
 ### Requirements
 
-For immediate use without installation, access Evo 2 through the [NVIDIA Hosted API](https://build.nvidia.com/arc/evo2-40b). You can deploy your own instance with the same API as the NVIDIA hosted service using NVIDIA NIM. See the [NVIDIA NIM](#nvidia-nim) section below for configuration details.
+Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://github.com/Zymrael/vortex) for more details and Docker option.
 
-### Prerequisites
-
-Evo 2 requires the following prerequisites. Evo 2 uses the Vortex, see the [Vortex github](https://github.com/Zymrael/vortex) for details and alternative installations
-
-- Python >= 3.10, < 3.13
-- CUDA version of PyTorch >= 2.5.0,<=2.6.1
-- [transformer_engine[pytorch]](https://docs.nvidia.com/deeplearning/transformer-engine-releases/release-1.13/user-guide/installation.html) == 1.13.0, which requires the following
-  - Linux x86_64
-  - CUDA 12.0
-  - NVIDIA Driver supporting CUDA 12.0 or later
-  - cuDNN 8.1 or later
-  - NVIDIA GPU with compute capability ≥8.9
+**Prerequisites**
+- [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) >= 2.0.0
+- [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) for optimized attention operations (strongly recommended)
+**System requirements**
+- [OS] Linux (official) or WSL2 (limited support)
+- [CUDA] 12.1+ (12.8+ for Blackwell) with compatible NVIDIA drivers
+- [GPU] Requires Compute Capability 8.9+ (Ada/Hopper/Blackwell) due to FP8 being required
+- [Python] 3.12 recommended
+See [Transformer Engine](https://github.com/NVIDIA/TransformerEngine?tab=readme-ov-file#system-requirements) for more details on system requirements.
 
 ### Installation
 
-To get started with Evo 2, install from pip or from github. We recommend using a conda environment to easily install the prerequisites.
+To get started with Evo 2, install from pip or from github after installing the prerequisites.
+
+We recommend using a conda environment to easily install Transformer Engine. To install the prerequisites:
+
 ```bash
-conda install -c nvidia cuda-toolkit
-conda install -c conda-forge transformer-engine-torch=1.13
+conda install -c conda-forge transformer-engine-torch=2.3.0
+pip install flash-attn==2.8.0.post2
 ```
-You can also use pip for Transformer Engine. Troubleshooting tips for Transformer Engine installation are available on the [Transformer Engine github](https://github.com/NVIDIA/TransformerEngine/blob/3baaf3ffe5bbfc87b3495b5513770cd4b85d7458/README.rst#troubleshooting).
 
 To install Evo 2:
 ```bash
 pip install evo2
 ```
-This installs and builds [Vortex](https://github.com/Zymrael/vortex). Look at the vortex github for alternative ways to install if facing errors. Common errors include already having incompatible versions of Flash Attention installed or not having CUDA_HOME and CPATH variables defined when installing.
 
 For the latest features or to contribute:
 ```bash
 git clone https://github.com/arcinstitute/evo2
 cd evo2
-pip install .
+pip install -e .
 ```
 
 To verify that the installation was correct:
+
 ```
 python -m evo2.test.test_evo2_generation --model_name evo2_7b
 ```
@@ -86,6 +85,8 @@ We provide the following model checkpoints, hosted on [HuggingFace](https://hugg
 | `evo2_1b_base`  | A smaller model pretrained with 8192 context length.|
 
 To use Evo 2 40B, you will need multiple GPUs. Vortex automatically handles device placement, splitting the model across available cuda devices.
+
+Note that the 7B checkpoints can be run without FP8, thus avoiding the compute capability requirement. This can be done by modifying the configs to turn off FP8 and is not officially supported as there are numerical differences.
 
 ## Usage
 
@@ -205,7 +206,7 @@ else:
 
 ### Very long sequences
 
-We are actively working on optimizing performance for long sequence processing in Vortex. Vortex can currently compute over very long sequences via teacher prompting. However please note that forward pass on long sequences may currently be slow. You can instead use [Savanna](https://github.com/Zymrael/savanna) or [Nvidia BioNemo](https://github.com/NVIDIA/bionemo-framework) for embedding long sequences.
+You can use [Savanna](https://github.com/Zymrael/savanna) or [Nvidia BioNemo](https://github.com/NVIDIA/bionemo-framework) for embedding long sequences. Vortex can currently compute over very long sequences via teacher prompting, however please note that forward pass on long sequences may currently be slow. 
 
 ### Dataset
 
@@ -234,3 +235,4 @@ If you find these models useful for your research, please cite the relevant pape
 	journal = {bioRxiv}
 }
 ```
+

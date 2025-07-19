@@ -1,10 +1,6 @@
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "evo2"
-version = "0.2.0"
+version = "0.3.0"
 description = "Genome modeling across all domains of life"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,9 +11,9 @@ authors = [
 dependencies = [
     "biopython",
     "huggingface_hub",
-    "torch>=2.6.0",
-    "transformer_engine[pytorch]==1.13.0",
-    "vtx",
+    "torch",
+    "transformer_engine>=2.0.0",
+    "vtx>=0.0.7",
 ]
 
 [project.urls]
