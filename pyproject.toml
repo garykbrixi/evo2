@@ -3,7 +3,7 @@ name = "evo2"
 version = "0.3.0"
 description = "Genome modeling across all domains of life"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = "==3.12"
 license = "Apache-2.0"
 authors = [
     {name = "Evo 2 Team"},
@@ -13,7 +13,7 @@ dependencies = [
     "huggingface_hub",
     "torch",
     "transformer_engine>=2.0.0",
-    "vtx>=0.0.7",
+    "vtx>=0.0.8",
 ]
 
 [project.urls]
