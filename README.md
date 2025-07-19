@@ -49,12 +49,10 @@ Check respective githubs for more details about [Transformer Engine](https://git
 ### Installation
 
 To get started with Evo 2, install from pip or from github after installing the prerequisites.
-
 We recommend using conda to easily install Transformer Engine. Here is an example of how to install the prerequisites:
-
 ```bash
 conda install -c conda-forge transformer-engine-torch=2.3.0
-pip install flash-attn==2.8.0.post2
+pip install flash-attn==2.8.0.post2 --no-build-isolation
 ```
 
 To install Evo 2:
