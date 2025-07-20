@@ -48,16 +48,16 @@ Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://git
 	- Python 3.12 required
   
 Check respective githubs for more details about [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) and [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) and how to install them.
-
-### Installation
-
-To get started with Evo 2, install from pip or from github after installing the prerequisites.
 We recommend using conda to easily install Transformer Engine. Here is an example of how to install the prerequisites:
 ```bash
 conda install -c nvidia cuda-nvcc cuda-cudart-dev
 conda install -c conda-forge transformer-engine-torch=2.3.0
 pip install flash-attn==2.8.0.post2 --no-build-isolation
 ```
+
+### Installation
+
+To get started with Evo 2, install from pip or from github after installing the prerequisites.
 
 To install Evo 2:
 ```bash

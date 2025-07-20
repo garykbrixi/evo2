@@ -95,8 +95,8 @@ def main():
     model = Evo2(args.model_name)
     
     # Read sequences
-    sequences = read_prompts('vortex/test/data/prompts.csv')
-    
+    sequences = read_prompts('prompts.csv')
+
     # Test forward pass
     accuracies, losses = test_forward_pass(
         model=model,
