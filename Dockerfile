@@ -3,7 +3,6 @@ from nvcr.io/nvidia/pytorch:25.04-py3 as base
 run apt-get update && apt-get install -y git python3-pip python3-tomli && rm -rf /var/lib/apt/lists/*
 
 # Install flash-attn and evo2
-run pip install flash-attn==2.8.0.post2
 run pip install evo2
 
 workdir /workdir

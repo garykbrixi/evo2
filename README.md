@@ -78,35 +78,20 @@ To verify that the installation was correct:
 python -m evo2.test.test_evo2_generation --model_name evo2_7b
 ```
 
-### Docker and Singularity
+### Docker
 
-You can also build and run Evo 2 using Docker.
-
-**Docker:**
+Evo 2 can be run using Docker (shown below), Singularity, or Apptainer.
 
 ```bash
 docker build -t evo2 .
-docker run     -it     --rm     --gpus all     -v ./huggingface:/root/.cache/huggingface     evo2     bash
+docker run -it --rm --gpus '"device=0"' -v ./huggingface:/root/.cache/huggingface evo2 bash
 ```
+Note: The volume mount (-v) preserves downloaded models between container runs and specifies where they are saved.
 
 Once inside the container:
 
 ```bash
 python -m evo2.test.test_evo2_generation --model_name evo2_7b
-```
-
-**Singularity / Apptainer:**
-
-```bash
-docker build -t evo2 .
-singularity build evo2.sif docker-daemon://evo2:latest
-mkdir -p models
-```
-
-To run the model using the Singularity image:
-
-```bash
-singularity exec     --nv     --bind $PWD:/app     --bind ./models:/root/.cache/huggingface     ./evo2.sif     python3 -m evo2.test.test_evo2_generation     --model_name evo2_7b
 ```
 
 ## Checkpoints
