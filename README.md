@@ -12,7 +12,7 @@ We describe Evo 2 in the preprint:
 - [Setup](#setup)
   - [Requirements](#requirements)
   - [Installation](#installation)
-  - [Docker and Singularity](#docker-and-singularity)
+  - [Docker](#docker)
 - [Checkpoints](#checkpoints)
 - [Usage](#usage)
   - [Forward](#forward)
