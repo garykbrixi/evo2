@@ -92,7 +92,7 @@ docker run     -it     --rm     --gpus all     -v ./huggingface:/root/.cache/hug
 Once inside the container:
 
 ```bash
-python3 ./test/test_evo2.py --model_name evo2_7b
+python -m evo2.test.test_evo2_generation --model_name evo2_7b
 ```
 
 **Singularity / Apptainer:**
@@ -106,7 +106,7 @@ mkdir -p models
 To run the model using the Singularity image:
 
 ```bash
-singularity exec     --nv     --bind $PWD:/app     --bind ./models:/root/.cache/huggingface     ./evo2.sif     python3 ./test/test_evo2.py     --model_name evo2_7b
+singularity exec     --nv     --bind $PWD:/app     --bind ./models:/root/.cache/huggingface     ./evo2.sif     python3 -m evo2.test.test_evo2_generation     --model_name evo2_7b
 ```
 
 ## Checkpoints
