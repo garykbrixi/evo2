@@ -14,14 +14,13 @@ We describe Evo 2 in the preprint:
   - [Installation](#installation)
   - [Docker](#docker)
 - [Usage](#usage)
-  - [Available Models](#available-models)
+  - [Checkpoints](#checkpoints)
   - [Forward](#forward)
   - [Embeddings](#embeddings)
   - [Generation](#generation)
-  - [Notebooks](#notebooks)
-  - [Nvidia NIM](#nvidia-nim)
+- [Notebooks](#notebooks)
+- [Nvidia NIM](#nvidia-nim)
 - [Dataset](#dataset)
-- [Checkpoints](#checkpoints)
 - [Training and Finetuning](#training-and-finetuning)
 - [Citation](#citation)
 
@@ -42,12 +41,13 @@ Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://git
 
 **System requirements**
 - [OS] Linux (official) or WSL2 (limited support)
-- [GPU] Requires Compute Capability 8.9+ (Ada/Hopper) for FP8 support (see [Checkpoints](#checkpoints) section for details)
+- [GPU] Requires Compute Capability 8.9+ (Ada/Hopper) for FP8 support
 - [Software]
 	- CUDA: 12.1+ with compatible NVIDIA drivers
 	- cuDNN: 9.3+
 	- Compiler: GCC 9+ or Clang 10+ with C++17 support
 	- Python 3.12 required
+**FP8 requirements:** The 40B and 1B models require FP8 on Hopper for accuracy, with reports of lower accuracy on Blackwell. The 7B models can run without FP8 by modifying the config. Always validate model outputs after configuration changes or on different hardware by using the test.
 
 Check respective githubs for more details about [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) and [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) and how to install them.
 We recommend using conda to easily install Transformer Engine. Here is an example of how to install the prerequisites:
@@ -102,15 +102,18 @@ python -m evo2.test.test_evo2_generation --model_name evo2_7b
 
 ## Usage
 
-Below are simple examples of how to download Evo 2 and use it locally in Python.
+### Checkpoints
 
+We provide the following model checkpoints, hosted on [HuggingFace](https://huggingface.co/arcinstitute):
+| Checkpoint Name                        | Description |
+|----------------------------------------|-------------|
+| `evo2_7b`  | 7B parameter model with 1M context |
+| `evo2_40b`  | 40B parameter model with 1M context (requires multiple GPUs) |
+| `evo2_7b_base`  | 7B parameter model with 8K context |
+| `evo2_40b_base`  | 40B parameter model with 8K context |
+| `evo2_1b_base`  | Smaller 1B parameter model with 8K context |
 
-Evo 2 comes in several sizes:
-- **`evo2_7b`** - 7B parameter model with 1M context
-- **`evo2_40b`** - 40B parameter model with 1M context (requires multiple GPUs)
-- **`evo2_7b_base`**, **`evo2_40b_base`**, **`evo2_1b_base`** - 8K context versions
-
-See the [Checkpoints](#checkpoints) section for detailed requirements and specifications.
+**Note:** The 40B model requires multiple GPUs. Vortex automatically handles device placement, splitting the model across available CUDA devices.
 
 ### Forward
 
@@ -172,7 +175,7 @@ output = evo2_model.generate(prompt_seqs=["ACGT"], n_tokens=400, temperature=1.0
 print(output.sequences[0])
 ```
 
-### Notebooks
+## Notebooks
 
 We provide example notebooks.
 
@@ -235,22 +238,7 @@ else:
 
 ### Very long sequences
 
-You can use [Savanna](https://github.com/Zymrael/savanna) or [Nvidia BioNemo](https://github.com/NVIDIA/bionemo-framework) for embedding long sequences. Vortex can currently compute over very long sequences via teacher prompting, however please note that forward pass on long sequences may currently be slow. 
-
-## Checkpoints
-
-We provide the following model checkpoints, hosted on [HuggingFace](https://huggingface.co/arcinstitute):
-| Checkpoint Name                        | Description |
-|----------------------------------------|-------------|
-| `evo2_40b`  | A model pretrained with 1 million context obtained through context extension of `evo2_40b_base`.|
-| `evo2_7b`  | A model pretrained with 1 million context obtained through context extension of `evo2_7b_base`.|
-| `evo2_40b_base`  | A model pretrained with 8192 context length.|
-| `evo2_7b_base`  | A model pretrained with 8192 context length.|
-| `evo2_1b_base`  | A smaller model pretrained with 8192 context length.|
-
-To use Evo 2 40B, you will need multiple GPUs. Vortex automatically handles device placement, splitting the model across available cuda devices.
-
-**FP8 requirement and checkpoints:** The 7B models are more stable and can be run without FP8 by modifying the config. The 40B and 1B models require FP8 on Hopper for accuracy, with reports of lower accuracy on Blackwell. Always validate model outputs using the provided test suite after any configuration changes or on different hardware.
+You can use [Savanna](https://github.com/Zymrael/savanna) or [Nvidia BioNemo](https://github.com/NVIDIA/bionemo-framework) for embedding long sequences. Vortex can currently compute over very long sequences via teacher prompting, however please note that forward pass on long sequences may currently be slow.
 
 ## Dataset
 
