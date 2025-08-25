@@ -47,7 +47,7 @@ Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://git
 	- cuDNN: 9.3+
 	- Compiler: GCC 9+ or Clang 10+ with C++17 support
 	- Python 3.12 required
-**FP8 requirements:** The 40B and 1B models require FP8 on Hopper for accuracy, with reports of lower accuracy on Blackwell. The 7B models can run without FP8 by modifying the config. Always validate model outputs after configuration changes or on different hardware by using the test.
+**FP8 requirements:** The 40B and 1B models require FP8 for numerical accuracy, and low accuracy has been reported on Blackwell hardware or without FP8. The 7B models can run without FP8 by modifying the config. Always validate model outputs after configuration changes or on different hardware by using the tests.
 
 Check respective githubs for more details about [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) and [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) and how to install them.
 We recommend using conda to easily install Transformer Engine. Here is an example of how to install the prerequisites:
