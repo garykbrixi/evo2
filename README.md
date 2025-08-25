@@ -41,13 +41,13 @@ Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://git
 
 **System requirements**
 - [OS] Linux (official) or WSL2 (limited support)
-- [GPU] Requires Compute Capability 8.9+ (Ada/Hopper/Blackwell) due to FP8 being required
+- [GPU] Requires Compute Capability 8.9+ (Ada/Hopper), see [FP8 requirements](#fp8-requirement-and-checkpoints) below
 - [Software]
-	- CUDA: 12.1+ (12.8+ for Blackwell) with compatible NVIDIA drivers
+	- CUDA: 12.1+ with compatible NVIDIA drivers
 	- cuDNN: 9.3+
 	- Compiler: GCC 9+ or Clang 10+ with C++17 support
 	- Python 3.12 required
-  
+
 Check respective githubs for more details about [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) and [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) and how to install them.
 We recommend using conda to easily install Transformer Engine. Here is an example of how to install the prerequisites:
 ```bash
@@ -107,7 +107,7 @@ We provide the following model checkpoints, hosted on [HuggingFace](https://hugg
 
 To use Evo 2 40B, you will need multiple GPUs. Vortex automatically handles device placement, splitting the model across available cuda devices.
 
-Note that the 7B checkpoints can be run without FP8, thus avoiding the compute capability requirement. This can be done by modifying the configs to turn off FP8 and is not officially supported as there are numerical differences.
+**FP8 requirement and checkpoints:** The 7B models are more stable and can be run without FP8 by modifying the config. The 40B and 1B models require FP8 on Hopper for accuracy, with reports of lower accuracy on Blackwell. Always validate model outputs using the provided test suite after any configuration changes or on different hardware.
 
 ## Usage
 
@@ -177,13 +177,22 @@ print(output.sequences[0])
 
 We provide example notebooks.
 
-The [BRCA1 notebook](https://github.com/ArcInstitute/evo2/blob/main/notebooks/brca1/brca1_zero_shot_vep.ipynb) shows zero-shot *BRCA1* variant effect prediction. This example includes a walkthrough of:
+The [BRCA1 scoring notebook](https://github.com/ArcInstitute/evo2/blob/main/notebooks/brca1/brca1_zero_shot_vep.ipynb) shows zero-shot *BRCA1* variant effect prediction. This example includes a walkthrough of:
 - Performing zero-shot *BRCA1* variant effect predictions using Evo 2
 - Reference vs alternative allele normalization
 
 The [generation notebook](https://github.com/ArcInstitute/evo2/blob/main/notebooks/generation/generation_notebook.ipynb) shows DNA sequence completion with Evo 2. This example shows:
 - DNA prompt based generation and 'DNA autocompletion'
 - How to get and prompt using phylogenetic species tags for generation
+
+The [exon classifier notebook](https://github.com/ArcInstitute/evo2/blob/main/notebooks/exon_classifier/exon_classifier.ipynb) demonstrates exon classification using Evo 2 embeddings. This example shows:
+- Running the Evo 2 based exon classifier
+- Performance metrics and visualization
+
+The [sparse autoencoder (SAE) notebook](https://github.com/ArcInstitute/evo2/blob/main/notebooks/sparse_autoencoder/sparse_autoencoder.ipynb) explores interpretable features learned by Evo 2. This example includes:
+- Running and visualizing Evo 2 SAE features
+- Demonstrating SAE features on a part of the *E. coli* genome
+
 
 ### Nvidia NIM
 
