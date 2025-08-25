@@ -13,14 +13,15 @@ We describe Evo 2 in the preprint:
   - [Requirements](#requirements)
   - [Installation](#installation)
   - [Docker](#docker)
-- [Checkpoints](#checkpoints)
 - [Usage](#usage)
+  - [Available Models](#available-models)
   - [Forward](#forward)
   - [Embeddings](#embeddings)
   - [Generation](#generation)
   - [Notebooks](#notebooks)
   - [Nvidia NIM](#nvidia-nim)
 - [Dataset](#dataset)
+- [Checkpoints](#checkpoints)
 - [Training and Finetuning](#training-and-finetuning)
 - [Citation](#citation)
 
@@ -41,7 +42,7 @@ Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://git
 
 **System requirements**
 - [OS] Linux (official) or WSL2 (limited support)
-- [GPU] Requires Compute Capability 8.9+ (Ada/Hopper), see [FP8 requirements](#fp8-requirement-and-checkpoints) below
+- [GPU] Requires Compute Capability 8.9+ (Ada/Hopper) for FP8 support (see [Checkpoints](#checkpoints) section for details)
 - [Software]
 	- CUDA: 12.1+ with compatible NVIDIA drivers
 	- cuDNN: 9.3+
@@ -78,6 +79,11 @@ To verify that the installation was correct:
 python -m evo2.test.test_evo2_generation --model_name evo2_7b
 ```
 
+For the 40b model:
+```
+python -m evo2.test.test_evo2_generation --model_name evo2_40b
+```
+
 ### Docker
 
 Evo 2 can be run using Docker (shown below), Singularity, or Apptainer.
@@ -94,24 +100,17 @@ Once inside the container:
 python -m evo2.test.test_evo2_generation --model_name evo2_7b
 ```
 
-## Checkpoints
-
-We provide the following model checkpoints, hosted on [HuggingFace](https://huggingface.co/arcinstitute):
-| Checkpoint Name                        | Description |
-|----------------------------------------|-------------|
-| `evo2_40b`  | A model pretrained with 1 million context obtained through context extension of `evo2_40b_base`.|
-| `evo2_7b`  | A model pretrained with 1 million context obtained through context extension of `evo2_7b_base`.|
-| `evo2_40b_base`  | A model pretrained with 8192 context length.|
-| `evo2_7b_base`  | A model pretrained with 8192 context length.|
-| `evo2_1b_base`  | A smaller model pretrained with 8192 context length.|
-
-To use Evo 2 40B, you will need multiple GPUs. Vortex automatically handles device placement, splitting the model across available cuda devices.
-
-**FP8 requirement and checkpoints:** The 7B models are more stable and can be run without FP8 by modifying the config. The 40B and 1B models require FP8 on Hopper for accuracy, with reports of lower accuracy on Blackwell. Always validate model outputs using the provided test suite after any configuration changes or on different hardware.
-
 ## Usage
 
 Below are simple examples of how to download Evo 2 and use it locally in Python.
+
+
+Evo 2 comes in several sizes:
+- **`evo2_7b`** - 7B parameter model with 1M context
+- **`evo2_40b`** - 40B parameter model with 1M context (requires multiple GPUs)
+- **`evo2_7b_base`**, **`evo2_40b_base`**, **`evo2_1b_base`** - 8K context versions
+
+See the [Checkpoints](#checkpoints) section for detailed requirements and specifications.
 
 ### Forward
 
@@ -194,7 +193,7 @@ The [sparse autoencoder (SAE) notebook](https://github.com/ArcInstitute/evo2/blo
 - Demonstrating SAE features on a part of the *E. coli* genome
 
 
-### Nvidia NIM
+## Nvidia NIM
 
 Evo 2 is available on [Nvidia NIM](https://catalog.ngc.nvidia.com/containers?filters=&orderBy=scoreDESC&query=evo2&page=&pageSize=) and [hosted API](https://build.nvidia.com/arc/evo2-40b).
 
@@ -238,11 +237,26 @@ else:
 
 You can use [Savanna](https://github.com/Zymrael/savanna) or [Nvidia BioNemo](https://github.com/NVIDIA/bionemo-framework) for embedding long sequences. Vortex can currently compute over very long sequences via teacher prompting, however please note that forward pass on long sequences may currently be slow. 
 
-### Dataset
+## Checkpoints
+
+We provide the following model checkpoints, hosted on [HuggingFace](https://huggingface.co/arcinstitute):
+| Checkpoint Name                        | Description |
+|----------------------------------------|-------------|
+| `evo2_40b`  | A model pretrained with 1 million context obtained through context extension of `evo2_40b_base`.|
+| `evo2_7b`  | A model pretrained with 1 million context obtained through context extension of `evo2_7b_base`.|
+| `evo2_40b_base`  | A model pretrained with 8192 context length.|
+| `evo2_7b_base`  | A model pretrained with 8192 context length.|
+| `evo2_1b_base`  | A smaller model pretrained with 8192 context length.|
+
+To use Evo 2 40B, you will need multiple GPUs. Vortex automatically handles device placement, splitting the model across available cuda devices.
+
+**FP8 requirement and checkpoints:** The 7B models are more stable and can be run without FP8 by modifying the config. The 40B and 1B models require FP8 on Hopper for accuracy, with reports of lower accuracy on Blackwell. Always validate model outputs using the provided test suite after any configuration changes or on different hardware.
+
+## Dataset
 
 The OpenGenome2 dataset used for pretraining Evo2 is available on [HuggingFace ](https://huggingface.co/datasets/arcinstitute/opengenome2). Data is available either as raw fastas or as JSONL files which include preprocessing and data augmentation.
 
-### Training and Finetuning
+## Training and Finetuning
 
 Evo 2 was trained using [Savanna](https://github.com/Zymrael/savanna), an open source framework for training alternative architectures.
 
