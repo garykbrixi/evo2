@@ -24,8 +24,8 @@ CONFIG_MAP = {
     'evo2_7b_base': 'configs/evo2-7b-8k.yml',
     'evo2_40b_base': 'configs/evo2-40b-8k.yml',
     'evo2_1b_base': 'configs/evo2-1b-8k.yml',
-    'evo2_7b_262k': 'configs/evo2-7b-8k.yml',  # Using 8k config for 262k model
-    'evo2_7b_microviridae': 'configs/evo2-7b-8k.yml',  # Using 8k config for microviridae model
+    'evo2_7b_262k': 'configs/evo2-7b-262k.yml',
+    'evo2_7b_microviridae': 'configs/evo2-7b-8k.yml',
 }
 
 
