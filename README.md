@@ -36,7 +36,7 @@ information.
 Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://github.com/Zymrael/vortex) for more details and Docker option.
 
 **Prerequisites**
-- [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) >= 2.0.0
+- [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) >= 2.0.0 (required for 40B, 20B, and 1B models)
 - [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) for optimized attention operations (strongly recommended)
 
 **System requirements**
@@ -48,7 +48,7 @@ Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://git
 	- Compiler: GCC 9+ or Clang 10+ with C++17 support
 	- Python 3.12 required
 
-**FP8 requirements:** The 40B and 1B models require FP8 for numerical accuracy, and low accuracy has been reported on Blackwell hardware or without FP8. The 7B models can run without FP8 by modifying the config. Always validate model outputs after configuration changes or on different hardware by using the tests.
+**FP8 requirements:** The 40B, 20B, and 1B models require FP8 via Transformer Engine for numerical accuracy. The 7B models (8k, 262k, 1m context) can run in bfloat16 without Transformer Engine. Always validate model outputs after configuration changes or on different hardware by using the tests.
 
 Check respective githubs for more details about [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) and [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) and how to install them.
 We recommend using conda to easily install Transformer Engine. Here is an example of how to install the prerequisites:
@@ -57,6 +57,8 @@ conda install -c nvidia cuda-nvcc cuda-cudart-dev
 conda install -c conda-forge transformer-engine-torch=2.3.0
 pip install flash-attn==2.8.0.post2 --no-build-isolation
 ```
+
+The 7B models (8k, 262k, 1m context) can run in bfloat16 without Transformer Engine. See the [Vortex github](https://github.com/Zymrael/vortex) for details.
 
 ### Installation
 
