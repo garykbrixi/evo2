@@ -196,7 +196,8 @@ class Evo2:
             config = dotdict(config)
 
             if config.get("use_fp8_input_projections", False) and not HAS_TE:
-                if "7b" in (model_name or ""):
+                is_7b_model = "7b" in (model_name or "") or "7b" in (config_path or "")
+                if is_7b_model:
                     warnings.warn(
                         "Transformer Engine not installed. "
                         "Falling back to bf16 projections (use_fp8_input_projections=False). "
@@ -204,7 +205,7 @@ class Evo2:
                     config.use_fp8_input_projections = False
                 else:
                     raise ImportError(
-                        f"Model '{model_name}' requires FP8 via Transformer Engine, "
+                        f"Model '{model_name or config_path}' requires FP8 via Transformer Engine, "
                         f"which is not installed.\n"
                         f"Install with: pip install transformer_engine\n"
                         f"For inference without TE, use any 7b model: Evo2('evo2_7b')"
