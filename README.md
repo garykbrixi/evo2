@@ -2,6 +2,12 @@
 
 ![Evo 2](evo2.jpg)
 
+> [!NOTE]
+> - **New Evo 2 20B checkpoint**: new checkpoint with 40B-level performance, read more [here](https://github.com/ArcInstitute/evo2/releases/tag/v0.5.0).
+> - **Light install for 7B models**: option compatible with more hardware, see [Installation](#installation).
+
+&nbsp;
+
 Evo 2 is a state of the art DNA language model for long context modeling and design. Evo 2 models DNA sequences at single-nucleotide resolution at up to 1 million base pair context length using the [StripedHyena 2](https://github.com/Zymrael/savanna/blob/main/paper.pdf) architecture. Evo 2 was pretrained using [Savanna](https://github.com/Zymrael/savanna). Evo 2 was trained autoregressively on [OpenGenome2](https://huggingface.co/datasets/arcinstitute/opengenome2), a dataset containing 8.8 trillion tokens from all domains of life.
 
 We describe Evo 2 in the preprint:
@@ -35,58 +41,59 @@ information.
 
 Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://github.com/Zymrael/vortex) for more details and Docker option.
 
-**Prerequisites**
-- [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) >= 2.0.0 (required for 40B, 20B, and 1B models)
-- [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) for optimized attention operations (strongly recommended)
-
 **System requirements**
 - [OS] Linux (official) or WSL2 (limited support)
-- [GPU] Requires Compute Capability 8.9+ (Ada/Hopper) for FP8 support
 - [Software]
 	- CUDA: 12.1+ with compatible NVIDIA drivers
 	- cuDNN: 9.3+
 	- Compiler: GCC 9+ or Clang 10+ with C++17 support
 	- Python 3.12 required
 
-**FP8 requirements:** The 40B, 20B, and 1B models require FP8 via Transformer Engine for numerical accuracy. The 7B models (8k, 262k, 1m context) can run in bfloat16 without Transformer Engine. Always validate model outputs after configuration changes or on different hardware by using the tests.
+**FP8 and Transformer Engine requirements**
 
-Check respective githubs for more details about [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) and [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) and how to install them.
-We recommend using conda to easily install Transformer Engine. Here is an example of how to install the prerequisites:
+The 40B, 20B, and 1B models require FP8 via [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) for numerical accuracy and a  Nvidia Hopper GPU. The 7B models can run in bfloat16 without Transformer Engine on any supported GPU.
+
+| Model | FP8 (Transformer Engine) Required |
+|-------|-----------------------------------|
+| `evo2_7b` / `evo2_7b_262k` / `evo2_7b_base`   | No |
+| `evo2_20b` | Yes |
+| `evo2_40b` / `evo2_40b_base` | Yes |
+| `evo2_1b_base` | Yes |
+
+Always validate model outputs after configuration changes or on different hardware by using the tests.
+
+### Installation
+
+**Full install**
+
+Install [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) and [Flash Attention](https://github.com/Dao-AILab/flash-attention/tree/main) first, then install Evo 2. We recommend using conda to install Transformer Engine:
 ```bash
 conda install -c nvidia cuda-nvcc cuda-cudart-dev
 conda install -c conda-forge transformer-engine-torch=2.3.0
 pip install flash-attn==2.8.0.post2 --no-build-isolation
-```
-
-The 7B models (8k, 262k, 1m context) can run in bfloat16 without Transformer Engine. See the [Vortex github](https://github.com/Zymrael/vortex) for details.
-
-### Installation
-
-To get started with Evo 2, install from pip or from github after installing the prerequisites.
-
-To install Evo 2:
-```bash
 pip install evo2
 ```
 
-For the latest features or to contribute:
+**Light install (7B models only, no Transformer Engine)**
+
+Evo 2 7B models can run without Transformer Engine or FP8-capable hardware. If you run into issues installing Flash Attention, see the [Flash Attention GitHub](https://github.com/Dao-AILab/flash-attention/tree/main) for system requirements and troubleshooting:
+```bash
+pip install flash-attn==2.8.0.post2 --no-build-isolation
+pip install evo2
+```
+
+**From source**
+
 ```bash
 git clone https://github.com/arcinstitute/evo2
 cd evo2
 pip install -e .
 ```
 
-To verify that the installation was correct:
+**Verify installation**
 
-```
-python -m evo2.test.test_evo2_generation --model_name evo2_7b
-```
-
-For the 20b or 40b models:
-```
-python -m evo2.test.test_evo2_generation --model_name evo2_20b
-
-python -m evo2.test.test_evo2_generation --model_name evo2_40b
+```bash
+python -m evo2.test.test_evo2_generation --model_name evo2_7b  # or evo2_1b_base, evo2_20b, evo2_40b
 ```
 
 ### Docker
