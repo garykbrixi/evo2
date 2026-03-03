@@ -49,7 +49,7 @@ Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://git
 
 **FP8 and Transformer Engine requirements**
 
-The 40B, 20B, and 1B models require FP8 via [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) for numerical accuracy and a  Nvidia Hopper GPU. The 7B models can run in bfloat16 without Transformer Engine on any supported GPU.
+The 40B, 20B, and 1B models require FP8 via [Transformer Engine](https://github.com/NVIDIA/TransformerEngine) for numerical accuracy and a Nvidia Hopper GPU. The 7B models can run in bfloat16 without Transformer Engine on any supported GPU.
 
 | Model | FP8 (Transformer Engine) Required |
 |-------|-----------------------------------|
