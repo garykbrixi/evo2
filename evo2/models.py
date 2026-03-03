@@ -200,7 +200,6 @@ class Evo2:
                     warnings.warn(
                         "Transformer Engine not installed. "
                         "Falling back to bf16 projections (use_fp8_input_projections=False). "
-                        "This is numerically equivalent for 7b models."
                     )
                     config.use_fp8_input_projections = False
                 else:
@@ -282,7 +281,6 @@ class Evo2:
                 warnings.warn(
                     "Transformer Engine not installed. "
                     "Falling back to bf16 projections (use_fp8_input_projections=False). "
-                    "This is numerically equivalent for 7b models."
                 )
                 global_config.use_fp8_input_projections = False
             else:
