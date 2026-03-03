@@ -3,10 +3,8 @@
 ![Evo 2](evo2.jpg)
 
 > [!NOTE]
-> - **New Evo 2 20B checkpoint**: new checkpoint with 40B-level performance, read more [here](https://github.com/ArcInstitute/evo2/releases/tag/v0.5.0).
-> - **Light install for 7B models**: option compatible with more hardware, see [Installation](#installation).
-
-&nbsp;
+> - **New Evo 2 20B checkpoint**: 40B-level performance with double the speed, read more [here](https://github.com/ArcInstitute/evo2/releases/tag/v0.5.0).
+> - **Light install for 7B models**: installation option compatible with more hardware, see [Installation](#installation).
 
 Evo 2 is a state of the art DNA language model for long context modeling and design. Evo 2 models DNA sequences at single-nucleotide resolution at up to 1 million base pair context length using the [StripedHyena 2](https://github.com/Zymrael/savanna/blob/main/paper.pdf) architecture. Evo 2 was pretrained using [Savanna](https://github.com/Zymrael/savanna). Evo 2 was trained autoregressively on [OpenGenome2](https://huggingface.co/datasets/arcinstitute/opengenome2), a dataset containing 8.8 trillion tokens from all domains of life.
 
