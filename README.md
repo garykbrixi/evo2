@@ -45,7 +45,8 @@ Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://git
 	- CUDA: 12.1+ with compatible NVIDIA drivers
 	- cuDNN: 9.3+
 	- Compiler: GCC 9+ or Clang 10+ with C++17 support
-	- Python 3.12 required
+	- Python 3.11 or 3.12
+- Recommended Torch 2.6.x or 2.7.x
 
 **FP8 and Transformer Engine requirements**
 
@@ -74,8 +75,10 @@ pip install evo2
 
 **Light install (7B models only, no Transformer Engine)**
 
-Evo 2 7B models can run without Transformer Engine or FP8-capable hardware. If you run into issues installing Flash Attention, see the [Flash Attention GitHub](https://github.com/Dao-AILab/flash-attention/tree/main) for system requirements and troubleshooting:
+Evo 2 7B models can run without Transformer Engine or FP8-capable hardware. If you run into issues installing Flash Attention, see the [Flash Attention GitHub](https://github.com/Dao-AILab/flash-attention/tree/main) for system requirements and troubleshooting.
+
 ```bash
+# A compatible PyTorch must be installed before flash attention, for example: pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cu128
 pip install flash-attn==2.8.0.post2 --no-build-isolation
 pip install evo2
 ```
