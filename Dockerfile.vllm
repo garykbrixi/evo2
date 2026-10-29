@@ -5,15 +5,17 @@
 #   docker run -it --rm --gpus '"device=0"' -v ./huggingface:/root/.cache/huggingface evo2-vllm bash
 #   python -m evo2.test.test_evo2 --model_name evo2_7b --backend vllm
 #
-# Supported GPUs: H100/H200, A100 40/80 GB, L4 (sm_80+; bf16 is mandatory). The
-# 40B needs an H200, or fp8 weights on an H100. One GPU per model.
-# A CUDA *devel* base is used so FlashInfer can JIT its kernels (needed for
-# kv_cache_dtype="fp8"); the host driver must support CUDA 12.9 (>= 560 with
-# forward compatibility, >= 575 natively).
+# One GPU per model, sm_80+ (A100, L4, H100, H200; bf16 is mandatory). The 40B
+# models are vortex-only (use ./Dockerfile); on vLLM use evo2_20b. Converted
+# checkpoints are cached under the mounted Hugging Face cache (evo2_vllm/).
+# A CUDA *devel* base is used so FlashInfer can JIT its kernels against the
+# toolkit at CUDA_HOME; the host driver must support CUDA 12.9 (>= 575, or
+# >= 560 with forward compatibility).
 FROM nvidia/cuda:12.9.1-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1 \
+    CUDA_HOME=/usr/local/cuda \
     VLLM_ENABLE_V1_MULTIPROCESSING=0 \
     HF_HUB_DISABLE_TELEMETRY=1
 
@@ -31,11 +33,19 @@ ENV PATH=/opt/venv/bin:/root/.local/bin:$PATH
 ARG VLLM_WHEEL=https://github.com/vllm-project/vllm/releases/download/v0.26.0/vllm-0.26.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl
 RUN pip install "${VLLM_WHEEL}" --extra-index-url https://download.pytorch.org/whl/cu129
 
-# evo2 (this checkout) with the vLLM extra, which brings the vllm_evo2 plugin.
-# Until vllm-evo2 is on PyPI, install the plugin from its repository instead:
-#   pip install git+https://github.com/ArcInstitute/evo2-vllm@v0.1.0
 WORKDIR /workdir
 COPY . /workdir/evo2
-RUN pip install "/workdir/evo2[vllm]"
+
+# The vllm_evo2 plugin. vllm-evo2 is not on PyPI yet, so it is installed from its
+# repository first (evo2[vllm] then finds it satisfied). To use a local wheel
+# instead, put it in the build context and pass e.g.
+#   --build-arg VLLM_EVO2_SPEC=/workdir/evo2/vllm_evo2-0.1.0-py3-none-any.whl
+# Once vllm-evo2 is on PyPI, pass --build-arg VLLM_EVO2_SPEC= to skip this step.
+ARG VLLM_EVO2_SPEC=git+https://github.com/ArcInstitute/evo2-vllm@v0.1.0
+RUN if [ -n "${VLLM_EVO2_SPEC}" ]; then pip install "${VLLM_EVO2_SPEC}"; fi
+
+# evo2 (this checkout) with the vLLM extra.
+RUN pip install "/workdir/evo2[vllm]" && \
+    python -c "import evo2, vllm_evo2; print('evo2', evo2.__version__, 'vllm_evo2', vllm_evo2.__version__)"
 
 CMD ["bash"]

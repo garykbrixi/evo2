@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,14 +8,29 @@ version = "0.7.0"
 description = "Genome modeling across all domains of life"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-license = {file = "LICENSE"}
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "AUTHORS"]
 authors = [
     {name = "Evo 2 Team"},
 ]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+# vtx (vortex) stays a base dependency so `pip install evo2` keeps working as
+# before; it is pure Python and does not constrain torch, so it also installs
+# (unused) next to vLLM. Transformer Engine and flash-attn are installed
+# separately for the vortex backend (see README).
 dependencies = [
     "biopython",
     "huggingface_hub",
+    "numpy",
+    "pyyaml",
     "torch",
+    "tqdm",
     "vtx>=1.1.0",
 ]
 
@@ -29,6 +44,7 @@ vllm = [
 [project.urls]
 Homepage = "https://github.com/arcinstitute/evo2"
 Repository = "https://github.com/arcinstitute/evo2"
+Changelog = "https://github.com/arcinstitute/evo2/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 package-dir = {"" = "."}

@@ -1,0 +1,18 @@
+# Keep the build context to what `pip install .` needs. A stale build/ would
+# otherwise be reused by setuptools and could put old files into the image.
+.git
+**/__pycache__
+**/*.py[cod]
+*.egg-info
+build
+dist
+release-build
+.venv*
+fresh_env
+notebooks
+phage_gen
+scripts
+*.log
+*.pdf
+*.png
+*.xlsx
