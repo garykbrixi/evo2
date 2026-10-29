@@ -22,20 +22,6 @@ HF_MODEL_NAME_MAP = {
     'evo2_7b_microviridae': 'evo-design/evo-2-7b-8k-microviridae',
 }
 
-# Converted (safetensors) checkpoints for the vLLM backend, one repo per model.
-# The 1B and 20B also carry a `surgery/` sidecar so the same repo runs on GPUs
-# without FP8 tensor cores (vllm_evo2/surgery.py). The 40B is not published for
-# vLLM (the 20B replaces it); a name missing here is converted locally from its
-# vortex .pt on first use.
-HF_VLLM_MODEL_NAME_MAP = {
-    'evo2_20b': 'gbrixi/evo2_20b_vllm',
-    'evo2_7b': 'gbrixi/evo2_7b_vllm',
-    'evo2_7b_base': 'gbrixi/evo2_7b_base_vllm',
-    'evo2_7b_262k': 'gbrixi/evo2_7b_262k_vllm',
-    'evo2_1b_base': 'gbrixi/evo2_1b_base_vllm',
-    'evo2_7b_microviridae': 'gbrixi/evo2_7b_microviridae_vllm',
-}
-
 CONFIG_MAP = {
     'evo2_7b': 'configs/evo2-7b-1m.yml',
     'evo2_40b': 'configs/evo2-40b-1m.yml',
