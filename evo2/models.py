@@ -72,7 +72,7 @@ class Evo2:
         self._model = None
 
         if self.backend == 'vllm':
-            from evo2.backends import vllm as vllm_backend
+            from evo2.backends import vllm_backend
 
             self._vllm = vllm_backend.load(
                 model_name, local_path=local_path, use_kernels=use_kernels, **backend_kwargs
