@@ -193,6 +193,10 @@ class Evo2:
         average_reverse_complement: bool = False,
     ) -> List[float]:
         if self._vllm is not None:
+            if batch_size not in (1, None):
+                warnings.warn(
+                    "backend='vllm': batch_size has no effect (all sequences are scored "
+                    "in one continuously batched call).", stacklevel=2)
             return self._vllm.score_sequences(
                 seqs,
                 batch_size=batch_size,
@@ -242,6 +246,13 @@ class Evo2:
         generate; the vortex backend accepts none.
         """
         if self._vllm is not None:
+            ignored = [name for name, val, default in (
+                ("batched", batched, True), ("cached_generation", cached_generation, True),
+                ("force_prompt_threshold", force_prompt_threshold, None)) if val != default]
+            if ignored:
+                warnings.warn(
+                    f"backend='vllm': {ignored} have no effect (vLLM always batches, keeps "
+                    "state, and bounds prefill memory with chunked prefill).", stacklevel=2)
             return self._vllm.generate(
                 prompt_seqs,
                 n_tokens=n_tokens,
