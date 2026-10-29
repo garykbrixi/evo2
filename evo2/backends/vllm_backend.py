@@ -92,8 +92,9 @@ def load(model_name: str, local_path: str | None = None, use_kernels: bool = Fal
         )
     if model_name in NOT_ON_VLLM:
         raise ValueError(
-            f"{model_name} is not available on the vLLM backend; evo2_20b replaces it. "
-            f"Use Evo2('evo2_20b'), or Evo2('{model_name}', backend='vortex')."
+            f"{model_name} is not available on the vLLM backend. evo2_20b has equivalent "
+            f"performance with higher efficiency: use Evo2('evo2_20b'). To run "
+            f"{model_name} itself, use Evo2('{model_name}', backend='vortex')."
         )
     if use_kernels:
         warnings.warn("use_kernels is a vortex option; the vLLM backend ignores it.",
