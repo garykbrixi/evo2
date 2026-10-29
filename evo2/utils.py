@@ -94,43 +94,30 @@ def resolve_backend(backend: str = 'auto') -> str:
 
 def make_phylotag_from_gbif(
         species_name: str,
-) -> dict:
+        timeout: float = 30.0,
+) -> str:
     """
-    Returns phylogenetic tags for a given species, to get new tags not in the metadata
+    Returns the phylogenetic tag for a species (to get new tags not in the metadata),
+    e.g. '|D__ANIMALIA;P__CHORDATA;...;S__PHASCOLARCTOS CINEREUS|', from the GBIF
+    species API. Returns None (and prints a message) if GBIF has no match.
     """
+    import json
+    import urllib.parse
+    import urllib.request
 
-    import requests
-    def get_taxonomy_from_gbif(species_name):
-        url = f"https://api.gbif.org/v1/species/match?name={species_name}"
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            return {
-                "kingdom": data.get("kingdom"),
-                "phylum": data.get("phylum"),
-                "class": data.get("class"),
-                "order": data.get("order"),
-                "family": data.get("family"),
-                "genus": data.get("genus"),
-                "species": data.get("species")
-            }
-        else:
-            print(f"Could not find taxonomy for {species_name}")
+    url = "https://api.gbif.org/v1/species/match?" + urllib.parse.urlencode({"name": species_name})
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            data = json.load(response)
+    except Exception as e:  # network error, HTTP error, bad JSON
+        print(f"Could not find taxonomy for {species_name} ({e})")
+        return None
 
-    taxonomy = get_taxonomy_from_gbif(species_name)
-    if taxonomy:
-        phylo_tag = (
-        f'd__{taxonomy["kingdom"]};'
-        f'p__{taxonomy["phylum"]};'
-        f'c__{taxonomy["class"]};'
-        f'o__{taxonomy["order"]};'
-        f'f__{taxonomy["family"]};'
-        f'g__{taxonomy["genus"]};'
-        f's__{taxonomy["species"]}'
-    ).upper()
-        phylo_tag = '|'+phylo_tag+'|'
-    else:
+    ranks = ("kingdom", "phylum", "class", "order", "family", "genus", "species")
+    if not data.get("kingdom"):
         print(f"Could not find taxonomy for {species_name}")
-
-    return phylo_tag.upper()
-
+        return None
+    phylo_tag = ";".join(f"{rank[0]}__{data.get(rank)}" for rank in ranks)
+    # GBIF's kingdom is the tag's domain field ('d__'), as before.
+    phylo_tag = "d" + phylo_tag[1:]
+    return ("|" + phylo_tag + "|").upper()

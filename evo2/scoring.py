@@ -6,6 +6,45 @@ from tqdm import tqdm
 import torch
 
 
+def _model_logits(model, input_ids: torch.Tensor) -> torch.Tensor:
+    """Logits (batch, length, vocab) from any model object the helpers accept.
+
+    - `evo2.Evo2` (either backend): its public `forward`, which returns
+      `((logits, inference_params_or_None), embeddings)`.
+    - `vllm_evo2.Evo2`: `forward` returns `(logits, embeddings)`.
+    - a vortex `StripedHyena` (the pre-0.7 calling convention, e.g.
+      `evo2_model.model`): called directly, returns `(logits, inference_params)`.
+
+    The vLLM plugin's raw `StripedHyena2ForCausalLM` (`evo2_model.model` on the
+    vLLM backend) is a vLLM module that cannot be called on token ids; pass the
+    `Evo2` object instead.
+    """
+    if type(model).__module__.startswith('vllm_evo2') and isinstance(model, torch.nn.Module):
+        raise TypeError(
+            "This is the vLLM engine's internal module (Evo2(...).model on the vLLM "
+            "backend), which cannot be called on token ids. Pass the Evo2 object itself, "
+            "e.g. positional_entropies(seqs, evo2_model)."
+        )
+    if isinstance(model, torch.nn.Module):
+        with torch.inference_mode():
+            out = model(input_ids)
+    else:
+        out = model.forward(input_ids)
+    logits = out[0] if isinstance(out, (tuple, list)) else out
+    if isinstance(logits, (tuple, list)):  # evo2.Evo2: ((logits, params), embeddings)
+        logits = logits[0]
+    return logits
+
+
+def _tokenizer_for(model, tokenizer):
+    if tokenizer is not None:
+        return tokenizer
+    tokenizer = getattr(model, 'tokenizer', None)
+    if tokenizer is None:
+        raise ValueError("tokenizer is required when model has no .tokenizer")
+    return tokenizer
+
+
 def prepare_batch(
         seqs: List[str],
         tokenizer: object,
@@ -46,6 +85,7 @@ def logits_to_logprobs(
     softmax_logprobs = torch.log_softmax(logits, dim=-1)
     softmax_logprobs = softmax_logprobs[:, :-1]
     input_ids = input_ids[:, 1:]
+    input_ids = input_ids.to(softmax_logprobs.device)
     assert softmax_logprobs.shape[1] == input_ids.shape[1]
 
     logprobs = torch.gather(
@@ -60,17 +100,17 @@ def logits_to_logprobs(
 def _score_sequences(
         seqs: List[str],
         model,
-        tokenizer: object,
+        tokenizer: object = None,
         prepend_bos: bool = False,
         reduce_method: str = 'mean',
         device: str = 'cuda:0',
 ) -> List[float]:
     """Helper function to score a list of sequences based on their logprobs."""
+    tokenizer = _tokenizer_for(model, tokenizer)
     input_ids, seq_lengths = prepare_batch(seqs, tokenizer, device=device, prepend_bos=prepend_bos)
     assert len(seq_lengths) == input_ids.shape[0]
 
-    with torch.inference_mode():
-        logits, _ = model(input_ids) # (batch, length, vocab)
+    logits = _model_logits(model, input_ids) # (batch, length, vocab)
 
     logprobs = logits_to_logprobs(logits, input_ids)
     logprobs = logprobs.float().cpu().numpy()
@@ -91,7 +131,7 @@ def _score_sequences(
 def score_sequences(
         seqs: List[str],
         model,
-        tokenizer: object,
+        tokenizer: object = None,
         batch_size: int = None,
         prepend_bos: bool = False,
         reduce_method: str = 'mean',
@@ -104,6 +144,9 @@ def score_sequences(
 
     Returns a list of scalar scores corresponding to the reduced log-likelihoods for
     each sequence.
+
+    `model` is an `evo2.Evo2` (either backend; `tokenizer` then defaults to its own)
+    or a vortex `StripedHyena`. `Evo2.score_sequences` is the faster path on vLLM.
     """
     if batch_size is None:
         batch_size = len(seqs)
@@ -126,8 +169,8 @@ def score_sequences(
 def score_sequences_rc(
         seqs: List[str],
         model,
-        tokenizer: object,
-        batch_size: int,
+        tokenizer: object = None,
+        batch_size: int = None,
         prepend_bos: bool = False,
         reduce_method: str = 'mean',
         device: str = 'cuda:0',
@@ -141,7 +184,12 @@ def score_sequences_rc(
 
     Returns a list of scalar scores corresponding to the reduced log-likelihoods for
     each sequence.
+
+    `model` is an `evo2.Evo2` (either backend; `tokenizer` then defaults to its own)
+    or a vortex `StripedHyena`.
     """
+    if batch_size is None:
+        batch_size = len(seqs)
     scores = []
     for i in tqdm(range(0, len(seqs), batch_size)):
         batch_seqs = seqs[i:i + batch_size]
@@ -172,7 +220,7 @@ def score_sequences_rc(
 def positional_entropies(
         seqs: List[str],
         model,
-        tokenizer: object,
+        tokenizer: object = None,
         prepend_bos: bool = False,
         device: str = 'cuda:0',
 ) -> List[np.array]:
@@ -182,13 +230,16 @@ def positional_entropies(
     Returns a list of arrays, where each array is the same length as the
     corresponding sequence length. Each array contains the per-position entropy
     across the vocab dimension.
+
+    `model` is an `evo2.Evo2` (either backend; `tokenizer` then defaults to its own)
+    or, as before 0.7, a vortex `StripedHyena` (`evo2_model.model`) with its tokenizer.
     """
+    tokenizer = _tokenizer_for(model, tokenizer)
     input_ids, seq_lengths = prepare_batch(seqs, tokenizer, device=device, prepend_bos=prepend_bos)
     assert len(seq_lengths) == input_ids.shape[0]
 
-    with torch.inference_mode():
-        logits, _ = model(input_ids) # (batch, length, vocab)
-    
+    logits = _model_logits(model, input_ids) # (batch, length, vocab)
+
     softmax_logprobs = torch.log_softmax(logits, dim=-1)
     if prepend_bos:
         softmax_logprobs = softmax_logprobs[:, 1:, :] # Remove BOS entropy.
@@ -210,17 +261,20 @@ def score_perplexity_along_sequence(
         model,
         seq: str,
         reverse_complement: bool = True,
-        entropy: bool = False
+        entropy: bool = False,
+        device: str = 'cuda:0',
     ) -> np.array:
     '''
     Get forward and reverse RC of dna sequence, pass both through model, and return average entropy or perplexity.
+
+    `model` is an `evo2.Evo2` on either backend.
     '''
     seq_rc = str(Seq(seq).reverse_complement())
-    
-    entropy_forward = positional_entropies([seq], model.model, model.tokenizer)[0]
+
+    entropy_forward = positional_entropies([seq], model, model.tokenizer, device=device)[0]
 
     if reverse_complement:
-        entropy_reverse = positional_entropies([seq_rc], model.model, model.tokenizer)[0]
+        entropy_reverse = positional_entropies([seq_rc], model, model.tokenizer, device=device)[0]
         entropy_reverse = entropy_reverse[::-1]
         
         average_entropy = (entropy_forward + entropy_reverse) / 2

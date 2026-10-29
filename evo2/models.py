@@ -44,11 +44,13 @@ class Evo2:
             placement itself and splits the model across multiple GPUs if available
             (Evo 2 40B needs several H100s). Select GPUs with CUDA_VISIBLE_DEVICES; do
             not call .to(device) manually.
-          - 'vllm': the vllm_evo2 plugin. One GPU per model (40B needs an H200, or
-            fp8 weights on an H100). Keyword arguments beyond those listed here go to
-            the engine: max_model_len, gpu_memory_utilization, kv_cache_dtype,
-            speculative, cfg, cache_dir, and vllm.LLM arguments. local_path may be a
-            vortex .pt (converted once) or a converted checkpoint directory.
+          - 'vllm': the vllm_evo2 plugin. One GPU per model. evo2_40b and
+            evo2_40b_base are not available on vLLM (use evo2_20b, or the vortex
+            backend). Keyword arguments beyond those listed here go to the plugin's
+            Evo2: fp8_mode, max_model_len, gpu_memory_utilization, kv_cache_dtype,
+            speculative, cfg, cache_dir, and vllm.LLM arguments. The plugin downloads
+            its own converted checkpoint by model name; local_path may be a vortex
+            .pt (converted once) or a converted checkpoint directory.
         The two backends agree to the authors' correctness gate (see README,
         'Inference backends', for the documented semantic differences).
 
@@ -238,9 +240,12 @@ class Evo2:
         verbose: int = 1,
         force_prompt_threshold: int = None,
         **kwargs,
-    ) -> Tuple[List[str], List[float]]:
+    ):
         """
         Generate sequences from a list of prompts.
+
+        Returns a GenerationOutput with `sequences`, `logprobs_mean` and `logits`
+        (vortex's dataclass, or the plugin's equivalent with the same fields).
 
         force_prompt_threshold: If specified, avoids OOM errors through teacher forcing if the prompt is longer than this threshold.
 
