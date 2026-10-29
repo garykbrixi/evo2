@@ -94,12 +94,13 @@ def dump(args):
 
     torch.manual_seed(1)
     torch.cuda.manual_seed(1)
-    model = Evo2(args.model_name, backend=args.backend)
+    model = Evo2(args.model_name, local_path=args.local_path, backend=args.backend)
     layer = args.layer or default_layer(args.model_name)
     seqs = read_prompts(args.input)
     if args.max_len:
         seqs = [s[:args.max_len] for s in seqs]
     out = {'meta': json.dumps({'backend': model.backend, 'model_name': args.model_name,
+                               'local_path': args.local_path,
                                'layer': layer, 'n_tokens': args.n_tokens,
                                'emb_stride': args.emb_stride, 'versions': versions(),
                                'time': time.strftime('%Y-%m-%dT%H:%M:%S')}),
@@ -229,6 +230,7 @@ def main():
     d.add_argument('--backend', choices=['auto', 'vortex', 'vllm'], default='auto')
     d.add_argument('--model_name', default='evo2_7b')
     d.add_argument('--out', required=True)
+    d.add_argument('--local_path', default=None, help='checkpoint to use instead of the hub download')
     d.add_argument('--input', default='prompts.csv', help='CSV with one sequence per row (header skipped)')
     d.add_argument('--layer', default=None, help='vortex module name for the embedding (default blocks.{N-4}.mlp.l3)')
     d.add_argument('--n_tokens', type=int, default=200)
