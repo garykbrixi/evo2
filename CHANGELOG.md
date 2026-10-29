@@ -15,7 +15,7 @@
 - `forward()` keeps its return shape on both backends: `((logits, inference_params), embeddings)` on vortex, `((logits, None), embeddings)` on vLLM. `layer_names` take vortex module names on both.
 - `evo2_40b` and `evo2_40b_base` are vortex-only; on vLLM they raise and point to `evo2_20b`, which has equivalent performance with higher efficiency.
 - `evo2.scoring` helpers (`positional_entropies`, `score_perplexity_along_sequence`, `score_sequences`, `score_sequences_rc`) accept an `Evo2` object on either backend, and `tokenizer` defaults to the model's. Passing a vortex `StripedHyena` with its tokenizer still works.
-- vortex-only arguments raise `TypeError` on vortex when given vLLM-only keywords; on vLLM, vortex-only options (`use_kernels`, `batched`, `cached_generation`, `force_prompt_threshold`, `batch_size` in `score_sequences`) are accepted and ignored with a warning.
+- On vortex, vLLM-only keywords raise `TypeError`; on vLLM, vortex-only options (`use_kernels`, `batched`, `cached_generation`, `force_prompt_threshold`, `batch_size` in `score_sequences`) are accepted and ignored with a warning.
 - `utils.make_phylotag_from_gbif` returns `None` when GBIF has no match or is unreachable (previously raised `UnboundLocalError` or returned a `D__NONE...` tag) and no longer needs `requests`.
 
 ### Compatibility
