@@ -4,7 +4,6 @@ from Bio.Seq import Seq
 from tqdm import tqdm
 
 import torch
-from vortex.model.model import StripedHyena
 
 
 def prepare_batch(
@@ -60,7 +59,7 @@ def logits_to_logprobs(
 
 def _score_sequences(
         seqs: List[str],
-        model: StripedHyena,
+        model,
         tokenizer: object,
         prepend_bos: bool = False,
         reduce_method: str = 'mean',
@@ -91,7 +90,7 @@ def _score_sequences(
 
 def score_sequences(
         seqs: List[str],
-        model: StripedHyena,
+        model,
         tokenizer: object,
         batch_size: int = None,
         prepend_bos: bool = False,
@@ -126,7 +125,7 @@ def score_sequences(
 
 def score_sequences_rc(
         seqs: List[str],
-        model: StripedHyena,
+        model,
         tokenizer: object,
         batch_size: int,
         prepend_bos: bool = False,
@@ -172,7 +171,7 @@ def score_sequences_rc(
 
 def positional_entropies(
         seqs: List[str],
-        model: StripedHyena,
+        model,
         tokenizer: object,
         prepend_bos: bool = False,
         device: str = 'cuda:0',
@@ -208,7 +207,7 @@ def positional_entropies(
 
 
 def score_perplexity_along_sequence(
-        model: StripedHyena,
+        model,
         seq: str,
         reverse_complement: bool = True,
         entropy: bool = False

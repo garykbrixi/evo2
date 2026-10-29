@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evo2"
-version = "0.6.0"
+version = "0.7.0"
 description = "Genome modeling across all domains of life"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
@@ -17,6 +17,13 @@ dependencies = [
     "huggingface_hub",
     "torch",
     "vtx>=1.1.0",
+]
+
+[project.optional-dependencies]
+# The vLLM backend. Install in its own environment: vLLM pins a newer torch than
+# the vortex stack (see README, "Inference backends").
+vllm = [
+    "vllm-evo2>=0.1,<0.2",
 ]
 
 [project.urls]
@@ -33,3 +40,4 @@ include = ["evo2*"]
 [tool.setuptools.package-data]
 "evo2" = ["configs/*.yml"]
 "evo2.test" = ["data/*.csv"]
+

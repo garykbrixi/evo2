@@ -42,7 +42,8 @@ def test_forward_pass(*, model, sequences):
         
         with torch.inference_mode():
             # Forward pass
-            logits, _ = model.model.forward(input_ids.unsqueeze(0))
+            outputs, _ = model(input_ids.unsqueeze(0))
+            logits = outputs[0]
             
             # Calculate loss and accuracy
             target_ids = input_ids[1:]  # Shift right for next token prediction
@@ -87,6 +88,8 @@ def main():
                        help="Model to test")
     parser.add_argument("--use_kernels", action="store_true",
                        help="Enable Vortex opt-in Triton HC{S,M,L} inference kernels (requires vtx>=1.1.0)")
+    parser.add_argument("--backend", choices=['auto', 'vortex', 'vllm'], default='auto',
+                       help="Inference backend (default: auto = vLLM if installed, else vortex)")
     
     args = parser.parse_args()
     
@@ -95,7 +98,7 @@ def main():
     torch.cuda.manual_seed(1)
     
     # Initialize model
-    model = Evo2(args.model_name, use_kernels=args.use_kernels)
+    model = Evo2(args.model_name, use_kernels=args.use_kernels, backend=args.backend)
     
     # Read sequences
     sequences = read_prompts('prompts.csv')
@@ -124,10 +127,13 @@ def main():
     }
     
     expected = expected_metrics[args.model_name]
-    if abs(mean_loss - expected['loss']) < eps:
+    delta = abs(mean_loss - expected['loss'])
+    print(f"\nBackend: {model.backend}  delta_loss={delta:.2e} (eps {eps:.0e})")
+    if delta < eps:
         print(f"\nTest Passed! Loss matches expected {expected['loss']:.3f}")
     else:
         print(f"\nTest Failed: Expected loss {expected['loss']:.3f}, got {mean_loss:.3f}")
+        raise SystemExit(1)
 
 if __name__ == "__main__":
     main()

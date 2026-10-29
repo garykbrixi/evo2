@@ -1,0 +1,41 @@
+# Evo 2 with the vLLM backend (vllm_evo2 plugin). Separate from ./Dockerfile
+# (the vortex stack): vLLM 0.26 pins torch 2.11, which the vortex stack cannot use.
+#
+#   docker build -f Dockerfile.vllm -t evo2-vllm .
+#   docker run -it --rm --gpus '"device=0"' -v ./huggingface:/root/.cache/huggingface evo2-vllm bash
+#   python -m evo2.test.test_evo2 --model_name evo2_7b --backend vllm
+#
+# Supported GPUs: H100/H200, A100 40/80 GB, L4 (sm_80+; bf16 is mandatory). The
+# 40B needs an H200, or fp8 weights on an H100. One GPU per model.
+# A CUDA *devel* base is used so FlashInfer can JIT its kernels (needed for
+# kv_cache_dtype="fp8"); the host driver must support CUDA 12.9 (>= 560 with
+# forward compatibility, >= 575 natively).
+FROM nvidia/cuda:12.9.1-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    VLLM_ENABLE_V1_MULTIPROCESSING=0 \
+    HF_HUB_DISABLE_TELEMETRY=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git curl ca-certificates ninja-build && \
+    rm -rf /var/lib/apt/lists/*
+
+# Python 3.12 via uv (the validated interpreter for vLLM 0.26 + the plugin).
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    /root/.local/bin/uv venv --seed --python 3.12 /opt/venv
+ENV PATH=/opt/venv/bin:/root/.local/bin:$PATH
+
+# vLLM 0.26.0, the +cu129 build. PyPI's default 0.26.0 wheel is cu130 and needs a
+# CUDA 13 driver; the cu129 wheel is published on the GitHub release page.
+ARG VLLM_WHEEL=https://github.com/vllm-project/vllm/releases/download/v0.26.0/vllm-0.26.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl
+RUN pip install "${VLLM_WHEEL}" --extra-index-url https://download.pytorch.org/whl/cu129
+
+# evo2 (this checkout) with the vLLM extra, which brings the vllm_evo2 plugin.
+# Until vllm-evo2 is on PyPI, install the plugin from its repository instead:
+#   pip install git+https://github.com/ArcInstitute/evo2-vllm@v0.1.0
+WORKDIR /workdir
+COPY . /workdir/evo2
+RUN pip install "/workdir/evo2[vllm]"
+
+CMD ["bash"]

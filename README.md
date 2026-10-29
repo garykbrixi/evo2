@@ -11,6 +11,7 @@ We describe Evo 2 in our paper:
 > - **Evo 2 published**: read more in [Nature](https://www.nature.com/articles/s41586-026-10176-5).
 > - **Evo 2 20B released**: 40B-level performance with double the speed, read more [here](https://github.com/ArcInstitute/evo2/releases/tag/v0.5.0).
 > - **Light install for 7B models**: option compatible with more hardware, see [Installation](#installation).
+> - **vLLM backend**: Evo 2 now runs on vLLM (recommended, 2-30x faster); vortex is still supported. See [Inference backends](#inference-backends).
 
 ## Contents
 
@@ -18,6 +19,7 @@ We describe Evo 2 in our paper:
   - [Requirements](#requirements)
   - [Installation](#installation)
   - [Docker](#docker)
+  - [Inference backends](#inference-backends)
 - [Usage](#usage)
   - [Checkpoints](#checkpoints)
   - [Forward](#forward)
@@ -31,7 +33,7 @@ We describe Evo 2 in our paper:
 
 ## Setup
 
-This repo is for running Evo 2 locally for inference or generation, using our [Vortex](https://github.com/Zymrael/vortex) inference code. For training and finetuning, see the section [here](#training-and-finetuning).
+This repo is for running Evo 2 locally for inference or generation, on [vLLM](https://github.com/vllm-project/vllm) (recommended, via the [`vllm_evo2`](https://github.com/ArcInstitute/evo2-vllm) plugin) or on our reference [Vortex](https://github.com/Zymrael/vortex) implementation. See [Inference backends](#inference-backends). For training and finetuning, see the section [here](#training-and-finetuning).
 You can run Evo 2 without any installation using the [Nvidia Hosted API](https://build.nvidia.com/arc/evo2-40b).
 You can also self-host an instance using Nvidia NIM. See the [Nvidia NIM](#nvidia-nim) section for more 
 information.
@@ -114,6 +116,37 @@ Once inside the container:
 python -m evo2.test.test_evo2_generation --model_name evo2_7b
 ```
 
+### Inference backends
+
+Evo 2 runs on two engines behind the same `Evo2` API. **vLLM is the recommended backend**: continuous batching, prefix caching and paged Hyena state make it 2-30x faster than vortex on generation and scoring workloads. **Vortex remains fully supported** and is the right choice for multi-GPU 40B inference (vLLM runs one model per GPU) and for anything that touches the reference StripedHyena modules directly.
+
+The two stacks pin different torch versions and cannot share a Python environment, so pick one per environment. `Evo2(...)` uses vLLM when it is installed and vortex otherwise; `backend="vortex"` / `backend="vllm"` (or `EVO2_BACKEND=...`) forces a choice. Each load prints the backend in use.
+
+**Install the vLLM backend** (Python 3.12, fresh environment; the vortex install is above):
+
+```bash
+# CUDA 12 driver (< 580): install the +cu129 wheel first. PyPI's default 0.26.0 wheel needs CUDA 13.
+pip install "https://github.com/vllm-project/vllm/releases/download/v0.26.0/vllm-0.26.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl" \
+    --extra-index-url https://download.pytorch.org/whl/cu129
+pip install "evo2[vllm]"     # until vllm-evo2 is on PyPI: pip install git+https://github.com/ArcInstitute/evo2-vllm@v0.1.0
+```
+
+`Dockerfile.vllm` builds the same thing as a container. Verify with `python -m evo2.test.test_evo2 --model_name evo2_7b --backend vllm`. Supported GPUs: H100/H200, A100, L4; the 40B needs an H200 (or `quantization="fp8"` on an H100).
+
+```python
+from evo2 import Evo2
+
+model = Evo2('evo2_7b')                                   # vLLM if installed, else vortex
+model = Evo2('evo2_7b', backend='vllm', max_model_len=131072)   # engine options pass through
+print(model.backend)
+```
+
+**Weights.** The vLLM backend loads converted safetensors from `arcinstitute/<name>_vllm`; if that repo is unavailable it converts the vortex `.pt` once into `$HF_HOME/evo2_vllm/`. `local_path=` takes a converted directory or a vortex `.pt`.
+
+**What differs on vLLM.** `score_sequences` ignores `batch_size` (one batched call) and computes log-softmax in fp32; `generate` always batches, treats `temperature=0` as greedy, accepts `seed=`, and computes `output.logits` lazily; `forward` returns logits and embeddings on the GPU, and `layer_names` still take vortex module names. Both backends pass the authors' correctness gate to the same 1e-3 tolerance; `python -m evo2.test.test_backend_parity` compares them directly on per-token likelihoods (run `dump` in each environment, then `compare`).
+
+**Troubleshooting.** vLLM's FlashInfer sampler JIT-compiles with the toolkit at `$CUDA_HOME` (else the first `nvcc` on `PATH`). A conda prefix that ships `nvcc` without headers gives `cuda_runtime.h: No such file or directory`; set `CUDA_HOME=/usr/local/cuda` and put the vLLM environment's `bin` first on `PATH`.
+
 ## Usage
 
 ### Checkpoints
@@ -130,7 +163,7 @@ We provide the following model checkpoints, hosted on [HuggingFace](https://hugg
 | `evo2_7b_262k`  | 7B parameter model with 262K context |
 | `evo2_7b_microviridae`  | 7B parameter base model fine-tuned on Microviridae genomes |
 
-**Note:** The 40B model requires multiple H100 GPUs. Vortex automatically handles device placement, splitting the model across available CUDA devices.
+**Note:** The 40B model requires multiple H100 GPUs on vortex (which splits it across devices) or one H200 on vLLM. The vLLM backend uses converted copies of these checkpoints, `arcinstitute/<name>_vllm`.
 
 **Optional: Triton inference kernels**
 
