@@ -141,7 +141,7 @@ model = Evo2('evo2_7b', backend='vllm', max_model_len=131072)   # engine options
 print(model.backend)
 ```
 
-**Weights.** The vLLM backend loads converted safetensors from `arcinstitute/<name>_vllm`; if that repo is unavailable it converts the vortex `.pt` once into `$HF_HOME/evo2_vllm/`. `local_path=` takes a converted directory or a vortex `.pt`.
+**Weights.** The vLLM backend downloads its own converted checkpoints automatically, and the same checkpoint runs on GPUs with and without FP8 tensor cores. The 40B is not available on vLLM; the 20B replaces it. `local_path=` takes a converted directory, or a vortex `.pt`, which is converted once on first use.
 
 **What differs on vLLM.** `score_sequences` ignores `batch_size` (one batched call) and computes log-softmax in fp32; `generate` always batches, treats `temperature=0` as greedy, accepts `seed=`, and computes `output.logits` lazily; `forward` returns logits and embeddings on the GPU, and `layer_names` still take vortex module names. Both backends pass the authors' correctness gate to the same 1e-3 tolerance; `python -m evo2.test.test_backend_parity` compares them directly on per-token likelihoods (run `dump` in each environment, then `compare`).
 
@@ -163,7 +163,7 @@ We provide the following model checkpoints, hosted on [HuggingFace](https://hugg
 | `evo2_7b_262k`  | 7B parameter model with 262K context |
 | `evo2_7b_microviridae`  | 7B parameter base model fine-tuned on Microviridae genomes |
 
-**Note:** The 40B model requires multiple H100 GPUs on vortex (which splits it across devices) or one H200 on vLLM. The vLLM backend uses converted copies of these checkpoints, `arcinstitute/<name>_vllm`.
+**Note:** The 40B model requires multiple H100 GPUs, and runs on the vortex backend only. On vLLM, use the 20B.
 
 **Optional: Triton inference kernels**
 

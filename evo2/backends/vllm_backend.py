@@ -24,8 +24,11 @@ from evo2.utils import HF_VLLM_MODEL_NAME_MAP, MODEL_NAMES, VLLM_INSTALL_HINT
 # calling process. vLLM reads this at import time.
 _IN_PROCESS_ENV = ("VLLM_ENABLE_V1_MULTIPROCESSING", "0")
 
+# The 40B models run on vortex only (multi-GPU); on vLLM the 20B replaces them.
+NOT_ON_VLLM = frozenset({"evo2_40b", "evo2_40b_base"})
+
 CONVERTED_PATTERNS = ["config.json", "*.safetensors", "*.safetensors.index.json",
-                      "metadata/*", "README.md"]
+                      "metadata/*", "surgery/*", "README.md"]
 
 
 def _import_plugin():
@@ -86,6 +89,11 @@ def load(model_name: str, local_path: str | None = None, use_kernels: bool = Fal
     if model_name not in MODEL_NAMES:
         raise ValueError(
             f"Invalid model name {model_name}. Should be one of: {', '.join(MODEL_NAMES)}."
+        )
+    if model_name in NOT_ON_VLLM:
+        raise ValueError(
+            f"{model_name} is not available on the vLLM backend; evo2_20b replaces it. "
+            f"Use Evo2('evo2_20b'), or Evo2('{model_name}', backend='vortex')."
         )
     if use_kernels:
         warnings.warn("use_kernels is a vortex option; the vLLM backend ignores it.",

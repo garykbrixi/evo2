@@ -69,9 +69,18 @@ def main():
     check("import evo2 imports neither backend", out.returncode == 0 and out.stdout.split() == ["0", "0"],
           out.stdout.strip() or out.stderr.strip()[-200:])
 
-    # Every vortex model name has a converted-repo counterpart.
-    check("HF_VLLM_MODEL_NAME_MAP covers MODEL_NAMES",
-          set(U.HF_VLLM_MODEL_NAME_MAP) == set(U.MODEL_NAMES) == set(U.HF_MODEL_NAME_MAP) == set(U.CONFIG_MAP))
+    # Every published converted repo belongs to a known model; the rest convert locally.
+    check("HF_VLLM_MODEL_NAME_MAP names only known models",
+          set(U.HF_VLLM_MODEL_NAME_MAP) <= set(U.MODEL_NAMES) == set(U.HF_MODEL_NAME_MAP) == set(U.CONFIG_MAP))
+
+    # The loader must fetch the surgery sidecar, or non-FP8 GPUs never see it.
+    from huggingface_hub.utils import filter_repo_objects
+    from evo2.backends.vllm_backend import CONVERTED_PATTERNS
+    layout = ["config.json", "model.safetensors", "metadata/hyena_in_proj_fp8_meta.safetensors",
+              "surgery/surgery.json", "surgery/tensors.safetensors", "README.md"]
+    got = set(filter_repo_objects(layout, allow_patterns=CONVERTED_PATTERNS))
+    check("download patterns fetch every file of a converted repo, sidecar included",
+          got == set(layout), str(sorted(set(layout) - got)))
 
     # The wrapper rejects engine kwargs on the vortex backend before loading anything.
     from evo2 import Evo2
@@ -81,6 +90,20 @@ def main():
               raises(lambda: Evo2("evo2_1b_base", backend="vortex", max_model_len=8192), TypeError))
         check("invalid model name raises ValueError before backend resolution",
               raises(lambda: Evo2("evo2_3b", backend="vortex"), ValueError))
+
+    # The 40B is vortex-only; on vLLM it must refuse before touching vLLM or the network.
+    from evo2.backends import vllm_backend
+    for name in ("evo2_40b", "evo2_40b_base"):
+        try:
+            vllm_backend.load(name)
+            ok, msg = False, "no error"
+        except ValueError as e:
+            ok, msg = "evo2_20b" in str(e), str(e)[:60]
+        except Exception as e:
+            ok, msg = False, f"{type(e).__name__}: {e}"[:80]
+        check(f"{name} on vLLM raises and points to evo2_20b", ok, msg)
+    check("every vortex-only model has no converted repo",
+          not (vllm_backend.NOT_ON_VLLM & set(U.HF_VLLM_MODEL_NAME_MAP)))
 
     n = len(RESULTS)
     print(f"\n{sum(RESULTS)}/{n} passed")
