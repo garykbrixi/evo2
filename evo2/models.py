@@ -114,6 +114,10 @@ class Evo2:
     @model.setter
     def model(self, value):
         if self._vllm is not None:
+            # `m.model = m.model.eval()` and similar in-place idioms are fine; a
+            # different module cannot be swapped into a running vLLM engine.
+            if value is self._vllm.model:
+                return
             raise AttributeError("model is read-only on the vLLM backend")
         self._model = value
 
