@@ -99,6 +99,8 @@ def main():
                        help="Enable Vortex opt-in Triton HC{S,M,L} inference kernels (requires vtx>=1.1.0)")
     parser.add_argument("--backend", choices=['auto', 'vortex', 'vllm'], default='auto',
                        help="Inference backend (default: auto = vLLM if installed, else vortex)")
+    parser.add_argument("--local_path", default=None,
+                       help="Checkpoint to test instead of the hub download (vortex .pt; on vLLM also a converted directory)")
     
     args = parser.parse_args()
     
@@ -109,7 +111,7 @@ def main():
     torch.manual_seed(1)
     torch.cuda.manual_seed(1)
         
-    model = Evo2(args.model_name, use_kernels=args.use_kernels, backend=args.backend)
+    model = Evo2(args.model_name, local_path=args.local_path, use_kernels=args.use_kernels, backend=args.backend)
 
     # Test parameters: greedy sampling of 500 tokens
     test_params = {
