@@ -40,7 +40,7 @@ information.
 
 ### Requirements
 
-Evo 2 is built on the Vortex inference repo, see the [Vortex github](https://github.com/Zymrael/vortex) for more details and Docker option.
+The requirements below are for the Vortex backend (see the [Vortex github](https://github.com/Zymrael/vortex) for more details). For the vLLM backend, see [Inference backends](#inference-backends).
 
 **System requirements**
 - [OS] Linux (official) or WSL2 (limited support)
@@ -102,7 +102,7 @@ python -m evo2.test.test_evo2_generation --model_name evo2_7b  # or evo2_1b_base
 
 ### Docker
 
-Evo 2 can be run using Docker (shown below), Singularity, or Apptainer.
+Evo 2 can be run using Docker (shown below, vortex backend; `docker build -f Dockerfile.vllm -t evo2-vllm .` for vLLM), Singularity, or Apptainer.
 
 ```bash
 docker build -t evo2 .
@@ -118,34 +118,35 @@ python -m evo2.test.test_evo2_generation --model_name evo2_7b
 
 ### Inference backends
 
-Evo 2 runs on two engines behind the same `Evo2` API. **vLLM is the recommended backend**: continuous batching, prefix caching and paged Hyena state make it 2-30x faster than vortex on generation and scoring workloads. **Vortex remains fully supported** and is the right choice for multi-GPU 40B inference (vLLM runs one model per GPU) and for anything that touches the reference StripedHyena modules directly.
+Evo 2 runs on two engines behind the same `Evo2` API. **vLLM is recommended** (via the [`vllm_evo2`](https://github.com/ArcInstitute/evo2-vllm) plugin; 2-30x faster on generation and scoring). **Vortex is still supported**, and is the only backend for the 40B models (on vLLM, use the 20B, which has equivalent performance with higher efficiency).
 
-The two stacks pin different torch versions and cannot share a Python environment, so pick one per environment. `Evo2(...)` uses vLLM when it is installed and vortex otherwise; `backend="vortex"` / `backend="vllm"` (or `EVO2_BACKEND=...`) forces a choice. Each load prints the backend in use.
+The two stacks need different torch versions, so install each in its own environment. `Evo2(...)` uses vLLM when it is installed and vortex otherwise; pass `backend='vllm'` or `backend='vortex'` (or set `EVO2_BACKEND`) to choose explicitly. Each load prints the backend in use.
 
-**Install the vLLM backend** (Python 3.12, fresh environment; the vortex install is above):
+**Install for vLLM** (Python 3.12, fresh environment):
 
 ```bash
-# CUDA 12 driver (< 580): install the +cu129 wheel first. PyPI's default 0.26.0 wheel needs CUDA 13.
+# On a CUDA 12 driver, first install vLLM 0.26.0's +cu129 wheel from its GitHub release
+# (the default PyPI wheel needs a CUDA 13 driver):
 pip install "https://github.com/vllm-project/vllm/releases/download/v0.26.0/vllm-0.26.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl" \
     --extra-index-url https://download.pytorch.org/whl/cu129
-pip install "evo2[vllm]"     # until vllm-evo2 is on PyPI: pip install git+https://github.com/ArcInstitute/evo2-vllm@v0.1.0
+pip install "evo2[vllm]"
+# Until vllm-evo2 is on PyPI, install the plugin first:
+#   pip install git+https://github.com/ArcInstitute/evo2-vllm@v0.1.0
 ```
 
-`Dockerfile.vllm` builds the same thing as a container. Verify with `python -m evo2.test.test_evo2 --model_name evo2_7b --backend vllm`. Supported GPUs: H100/H200, A100, L4; the 40B needs an H200 (or `quantization="fp8"` on an H100).
+Verify with `python -m evo2.test.test_evo2 --model_name evo2_7b --backend vllm`. `Dockerfile.vllm` builds the same environment as a container.
 
 ```python
 from evo2 import Evo2
 
-model = Evo2('evo2_7b')                                   # vLLM if installed, else vortex
+model = Evo2('evo2_7b')                                         # vLLM if installed, else vortex
 model = Evo2('evo2_7b', backend='vllm', max_model_len=131072)   # engine options pass through
 print(model.backend)
 ```
 
-**Weights.** The vLLM backend downloads its own converted checkpoints automatically, and the same checkpoint runs on GPUs with and without FP8 tensor cores. The 40B is not available on vLLM; the 20B replaces it. `local_path=` takes a converted directory, or a vortex `.pt`, which is converted once on first use.
+On vLLM, checkpoints are downloaded and converted automatically by model name; `local_path=` takes a vortex `.pt` (converted once) or a converted directory. The usage examples below work unchanged on both backends. Small differences: `score_sequences` ignores `batch_size`; `generate` always batches, treats `temperature=0` as greedy and accepts `seed=`; `use_kernels` is vortex-only; `evo2_model.model` is vLLM's internal module, so use `forward(..., layer_names=[...])` (vortex layer names) rather than hooking it directly.
 
-**What differs on vLLM.** `score_sequences` ignores `batch_size` (one batched call) and computes log-softmax in fp32; `generate` always batches, treats `temperature=0` as greedy, accepts `seed=`, and computes `output.logits` lazily; `forward` returns logits and embeddings on the GPU, and `layer_names` still take vortex module names. Both backends pass the authors' correctness gate to the same 1e-3 tolerance; `python -m evo2.test.test_backend_parity` compares them directly on per-token likelihoods (run `dump` in each environment, then `compare`).
-
-**Troubleshooting.** vLLM's FlashInfer sampler JIT-compiles with the toolkit at `$CUDA_HOME` (else the first `nvcc` on `PATH`). A conda prefix that ships `nvcc` without headers gives `cuda_runtime.h: No such file or directory`; set `CUDA_HOME=/usr/local/cuda` and put the vLLM environment's `bin` first on `PATH`.
+**Troubleshooting.** If FlashInfer's JIT fails with `cuda_runtime.h: No such file or directory`, point `CUDA_HOME` at a full CUDA toolkit (e.g. `export CUDA_HOME=/usr/local/cuda`).
 
 ## Usage
 
@@ -171,7 +172,7 @@ Evo 2 can dispatch Triton kernels from [Vortex PR #77](https://github.com/Zymrae
 
 ```python
 from evo2 import Evo2
-evo2_model = Evo2('evo2_7b', use_kernels=True) # enable inference kernels
+evo2_model = Evo2('evo2_7b', backend='vortex', use_kernels=True) # enable inference kernels (vortex only)
 ```
 
 to test, pass `--use_kernels` to the test scripts:
