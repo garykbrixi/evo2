@@ -1,6 +1,6 @@
-"""The vLLM backend: a thin layer over the ``vllm_evo2`` plugin.
+"""The vLLM backend: a thin layer over the ``evo2_flash`` plugin.
 
-The plugin (PyPI ``vllm-evo2``) provides ``vllm_evo2.Evo2``, which already
+The plugin (PyPI ``evo2-flash``) provides ``evo2_flash.Evo2``, which already
 mirrors ``evo2.Evo2``'s API, and resolves checkpoints itself: by name it
 downloads the published converted checkpoint for the model, and ``local_path``
 may be a converted directory or a vortex ``.pt`` (converted once). It also picks
@@ -24,18 +24,18 @@ NOT_ON_VLLM = frozenset({"evo2_40b", "evo2_40b_base"})
 def _import_plugin():
     os.environ.setdefault(*_IN_PROCESS_ENV)
     try:
-        import vllm_evo2  # noqa: F401
+        import evo2_flash  # noqa: F401
     except ImportError as e:
-        raise ImportError(f"vllm_evo2 is not importable ({e}).\n{VLLM_INSTALL_HINT}") from e
-    return vllm_evo2
+        raise ImportError(f"evo2_flash is not importable ({e}).\n{VLLM_INSTALL_HINT}") from e
+    return evo2_flash
 
 
 def load(model_name: str, local_path: str | None = None, use_kernels: bool = False,
          log=print, **engine_kwargs):
-    """Build and return a `vllm_evo2.Evo2`.
+    """Build and return an `evo2_flash.Evo2`.
 
     `use_kernels` is vortex-only and ignored here (the plugin always runs its
-    own kernels). `engine_kwargs` go to `vllm_evo2.Evo2`: `fp8_mode`,
+    own kernels). `engine_kwargs` go to `evo2_flash.Evo2`: `fp8_mode`,
     `max_model_len`, `gpu_memory_utilization`, `kv_cache_dtype`, `cache_dir`,
     and `vllm.LLM` arguments (the plugin warns for ones outside its validated
     set).
@@ -54,8 +54,8 @@ def load(model_name: str, local_path: str | None = None, use_kernels: bool = Fal
     if use_kernels:
         warnings.warn("use_kernels is a vortex option; the vLLM backend ignores it.",
                       stacklevel=3)
-    vllm_evo2 = _import_plugin()
-    return vllm_evo2.Evo2(model_name, local_path=local_path, **engine_kwargs)
+    evo2_flash = _import_plugin()
+    return evo2_flash.Evo2(model_name, local_path=local_path, **engine_kwargs)
 
 
 def describe(model) -> str:

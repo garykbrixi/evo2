@@ -4,7 +4,7 @@
 
 - ``vortex`` (default when vLLM is absent): the reference StripedHyena 2
   implementation, in-process, multi-GPU model splitting for 40B.
-- ``vllm``: the out-of-tree vLLM plugin ``vllm_evo2`` (continuous batching,
+- ``vllm``: the out-of-tree vLLM plugin ``evo2_flash`` (continuous batching,
   paged Hyena state, prefix caching), one GPU per model.
 
 Each backend lives in its own module and is imported lazily, so ``import evo2``

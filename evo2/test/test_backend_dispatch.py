@@ -41,6 +41,7 @@ def main():
                   U.resolve_backend("vllm") == "vllm")
 
     with mock.patch.object(U, "vllm_backend_available", return_value=False), \
+            mock.patch.object(U, "_vllm_half_installed", return_value=None), \
             mock.patch.dict(os.environ, env_clear):
         check("auto -> vortex when vllm is absent", U.resolve_backend("auto") == "vortex")
         check("explicit vllm raises ImportError when absent",
@@ -60,7 +61,7 @@ def main():
     before = set(sys.modules)
     U.vllm_backend_available()
     check("availability probe imports neither vllm nor vortex",
-          not ({"vllm", "vortex", "vllm_evo2"} & (set(sys.modules) - before)))
+          not ({"vllm", "vortex", "evo2_flash"} & (set(sys.modules) - before)))
 
     # `import evo2` must not import vortex or vLLM (each backend is lazy).
     code = ("import sys, evo2; "
@@ -86,6 +87,28 @@ def main():
         check(f"{name} on vLLM raises and points to evo2_20b", ok, msg)
     check("the vortex-only models are real model names",
           vllm_backend.NOT_ON_VLLM <= set(U.MODEL_NAMES))
+
+    # Half-installed vLLM backend: 'auto' must not silently fall back to vortex.
+    for half in ("evo2_flash is installed but vLLM is not",
+                 "vLLM is installed but evo2_flash is not (install evo2 with the [vllm] extra)"):
+        with mock.patch.object(U, "vllm_backend_available", return_value=False), \
+                mock.patch.object(U, "_vllm_half_installed", return_value=half), \
+                mock.patch.dict(os.environ, env_clear):
+            try:
+                U.resolve_backend("auto")
+                ok, msg = False, "no error"
+            except ImportError as e:
+                ok, msg = ("torchcodec==0.16.0" in str(e) and "vllm-0.26.0+cu129" in str(e)), half[:40]
+            check(f"auto raises with install commands when {half.split(' is installed')[0]} alone is installed", ok, msg)
+            check("explicit vortex still works when half-installed",
+                  U.resolve_backend("vortex") == "vortex")
+    import importlib.util
+    with mock.patch.object(importlib.util, "find_spec",
+                           side_effect=lambda n, *a, **k: object() if n == "evo2_flash" else None):
+        check("half-install detection: plugin without vLLM",
+              U._vllm_half_installed() == "evo2_flash is installed but vLLM is not")
+    with mock.patch.object(importlib.util, "find_spec", return_value=None):
+        check("half-install detection: neither installed", U._vllm_half_installed() is None)
 
     n = len(RESULTS)
     print(f"\n{sum(RESULTS)}/{n} passed")

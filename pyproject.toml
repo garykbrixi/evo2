@@ -38,7 +38,7 @@ dependencies = [
 # The vLLM backend. Install in its own environment: vLLM pins a newer torch than
 # the vortex stack (see README, "Inference backends").
 vllm = [
-    "vllm-evo2>=0.1,<0.2",
+    "evo2-flash>=0.1.1,<0.2",
 ]
 
 [project.urls]

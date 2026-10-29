@@ -43,15 +43,16 @@ BACKEND_ENV_VAR = 'EVO2_BACKEND'
 
 VLLM_INSTALL_HINT = (
     "The vLLM backend needs its own Python environment (vLLM pins a newer torch than "
-    "the vortex stack):\n"
-    "    pip install vllm==0.26.0   # on a CUDA 12 driver use the +cu129 wheel, see README\n"
+    "the vortex stack). Install vLLM 0.26.0's CUDA 12.9 build, then evo2 with the vLLM extra:\n"
+    '    pip install "https://github.com/vllm-project/vllm/releases/download/v0.26.0/vllm-0.26.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl" \\\n'
+    '        "torchcodec==0.16.0" --extra-index-url https://download.pytorch.org/whl/cu129\n'
     "    pip install 'evo2[vllm]'\n"
     "See README.md, 'Inference backends'."
 )
 
 
 def vllm_backend_available() -> bool:
-    """True if both vLLM and the vllm_evo2 plugin can be imported.
+    """True if both vLLM and the evo2_flash plugin can be imported.
 
     Uses find_spec so that merely asking does not import vLLM (which is slow
     and has side effects).
@@ -59,8 +60,20 @@ def vllm_backend_available() -> bool:
     import importlib.util
     return all(
         importlib.util.find_spec(name) is not None
-        for name in ('vllm', 'vllm_evo2')
+        for name in ('vllm', 'evo2_flash')
     )
+
+
+def _vllm_half_installed() -> str | None:
+    """Which half of the vLLM backend is installed without the other, if either."""
+    import importlib.util
+    have_vllm = importlib.util.find_spec('vllm') is not None
+    have_plugin = importlib.util.find_spec('evo2_flash') is not None
+    if have_plugin and not have_vllm:
+        return "evo2_flash is installed but vLLM is not"
+    if have_vllm and not have_plugin:
+        return "vLLM is installed but evo2_flash is not (install evo2 with the [vllm] extra)"
+    return None
 
 
 def resolve_backend(backend: str = 'auto') -> str:
@@ -68,7 +81,9 @@ def resolve_backend(backend: str = 'auto') -> str:
 
     'auto' (the default) picks vLLM when it is importable and vortex otherwise.
     The two stacks cannot share an environment, so an importable vLLM means the
-    user built a vLLM environment on purpose. The EVO2_BACKEND environment
+    user built a vLLM environment on purpose. If only one half of the vLLM
+    backend (vLLM, or the evo2_flash plugin) is installed, 'auto' raises with the
+    install instructions instead of silently falling back to vortex. The EVO2_BACKEND environment
     variable overrides 'auto' only; an explicit argument always wins.
     """
     if backend is None:
@@ -83,10 +98,18 @@ def resolve_backend(backend: str = 'auto') -> str:
             f"Invalid backend {backend!r}. Should be one of: {', '.join(BACKENDS)}."
         )
     if backend == 'auto':
-        return 'vllm' if vllm_backend_available() else 'vortex'
+        if vllm_backend_available():
+            return 'vllm'
+        half = _vllm_half_installed()
+        if half:
+            raise ImportError(
+                f"The vLLM backend is only partly installed: {half}.\n{VLLM_INSTALL_HINT}\n"
+                "To use vortex here instead, pass backend='vortex' (or set EVO2_BACKEND=vortex)."
+            )
+        return 'vortex'
     if backend == 'vllm' and not vllm_backend_available():
         raise ImportError(
-            f"backend='vllm' was requested but vLLM and/or vllm_evo2 are not installed.\n"
+            f"backend='vllm' was requested but vLLM and/or evo2_flash are not installed.\n"
             + VLLM_INSTALL_HINT
         )
     return backend

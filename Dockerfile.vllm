@@ -1,4 +1,4 @@
-# Evo 2 with the vLLM backend (vllm_evo2 plugin). Separate from ./Dockerfile
+# Evo 2 with the vLLM backend (evo2_flash plugin). Separate from ./Dockerfile
 # (the vortex stack): vLLM 0.26 pins torch 2.11, which the vortex stack cannot use.
 #
 #   docker build -f Dockerfile.vllm -t evo2-vllm .
@@ -28,24 +28,16 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     /root/.local/bin/uv venv --seed --python 3.12 /opt/venv
 ENV PATH=/opt/venv/bin:/root/.local/bin:$PATH
 
-# vLLM 0.26.0, the +cu129 build. PyPI's default 0.26.0 wheel is cu130 and needs a
-# CUDA 13 driver; the cu129 wheel is published on the GitHub release page.
+# vLLM 0.26.0, the CUDA 12.9 build (PyPI's default 0.26.0 wheel is CUDA 13 and needs a
+# CUDA 13 driver). torchcodec is pinned: releases after 0.16 do not load with vLLM 0.26's torch.
 ARG VLLM_WHEEL=https://github.com/vllm-project/vllm/releases/download/v0.26.0/vllm-0.26.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl
-RUN pip install "${VLLM_WHEEL}" --extra-index-url https://download.pytorch.org/whl/cu129
+RUN pip install "${VLLM_WHEEL}" "torchcodec==0.16.0" --extra-index-url https://download.pytorch.org/whl/cu129
 
 WORKDIR /workdir
 COPY . /workdir/evo2
 
-# The vllm_evo2 plugin. vllm-evo2 is not on PyPI yet, so it is installed from its
-# repository first (evo2[vllm] then finds it satisfied). To use a local wheel
-# instead, put it in the build context and pass e.g.
-#   --build-arg VLLM_EVO2_SPEC=/workdir/evo2/vllm_evo2-0.1.0-py3-none-any.whl
-# Once vllm-evo2 is on PyPI, pass --build-arg VLLM_EVO2_SPEC= to skip this step.
-ARG VLLM_EVO2_SPEC=git+https://github.com/ArcInstitute/evo2-vllm@v0.1.0
-RUN if [ -n "${VLLM_EVO2_SPEC}" ]; then pip install "${VLLM_EVO2_SPEC}"; fi
-
-# evo2 (this checkout) with the vLLM extra.
+# evo2 (this checkout) with the vLLM extra, which installs evo2-flash from PyPI.
 RUN pip install "/workdir/evo2[vllm]" && \
-    python -c "import evo2, vllm_evo2; print('evo2', evo2.__version__, 'vllm_evo2', vllm_evo2.__version__)"
+    python -c "import evo2, evo2_flash, importlib.metadata as m; print('evo2', evo2.__version__, 'evo2-flash', m.version('evo2-flash'))"
 
 CMD ["bash"]

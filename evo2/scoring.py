@@ -11,7 +11,7 @@ def _model_logits(model, input_ids: torch.Tensor) -> torch.Tensor:
 
     - `evo2.Evo2` (either backend): its public `forward`, which returns
       `((logits, inference_params_or_None), embeddings)`.
-    - `vllm_evo2.Evo2`: `forward` returns `(logits, embeddings)`.
+    - `evo2_flash.Evo2`: `forward` returns `(logits, embeddings)`.
     - a vortex `StripedHyena` (the pre-0.7 calling convention, e.g.
       `evo2_model.model`): called directly, returns `(logits, inference_params)`.
 
@@ -19,7 +19,7 @@ def _model_logits(model, input_ids: torch.Tensor) -> torch.Tensor:
     vLLM backend) is a vLLM module that cannot be called on token ids; pass the
     `Evo2` object instead.
     """
-    if type(model).__module__.startswith('vllm_evo2') and isinstance(model, torch.nn.Module):
+    if type(model).__module__.startswith('evo2_flash') and isinstance(model, torch.nn.Module):
         raise TypeError(
             "This is the vLLM engine's internal module (Evo2(...).model on the vLLM "
             "backend), which cannot be called on token ids. Pass the Evo2 object itself, "

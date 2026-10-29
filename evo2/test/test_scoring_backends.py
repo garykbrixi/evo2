@@ -63,7 +63,7 @@ class FakeStripedHyena(torch.nn.Module):
 
 
 class FakePluginEvo2:
-    """vllm_evo2.Evo2: forward -> (logits, embeddings)."""
+    """evo2_flash.Evo2: forward -> (logits, embeddings)."""
 
     def __init__(self):
         self.tokenizer = ByteTokenizer()
@@ -95,7 +95,7 @@ class FakePluginModule(torch.nn.Module):
         raise AssertionError("the vLLM engine module must never be called on token ids")
 
 
-FakePluginModule.__module__ = "vllm_evo2.model"
+FakePluginModule.__module__ = "evo2_flash.model"
 
 
 def vortex_evo2():
@@ -106,7 +106,7 @@ def vortex_evo2():
     return m
 
 
-def vllm_evo2(**kwargs):
+def flash_plugin(**kwargs):
     """Build an evo2.Evo2 through the real __init__, with the plugin faked."""
     plugin = FakePluginEvo2()
     with mock.patch("evo2.models.resolve_backend", return_value="vllm"), \
@@ -119,7 +119,7 @@ def vllm_evo2(**kwargs):
 def main():
     seqs = ["ACGTACGTTTGA", "GGCATTACA"]
     vx = vortex_evo2()
-    vl, plugin, load = vllm_evo2(fp8_mode="surgery")
+    vl, plugin, load = flash_plugin(fp8_mode="surgery")
 
     # --- Evo2 wrapper on the (fake) vLLM backend --------------------------------
     check("vllm: backend kwargs pass through to the plugin",
@@ -217,8 +217,8 @@ def main():
               U.make_phylotag_from_gbif("Phascolarctos cinereus") is None)
 
     check("no backend stack was imported",
-          not ({"vortex", "vllm", "vllm_evo2"} & set(sys.modules)),
-          str({"vortex", "vllm", "vllm_evo2"} & set(sys.modules)))
+          not ({"vortex", "vllm", "evo2_flash"} & set(sys.modules)),
+          str({"vortex", "vllm", "evo2_flash"} & set(sys.modules)))
 
     n = len(RESULTS)
     print(f"\n{sum(RESULTS)}/{n} passed")

@@ -33,7 +33,7 @@ We describe Evo 2 in our paper:
 
 ## Setup
 
-This repo is for running Evo 2 locally for inference or generation, on [vLLM](https://github.com/vllm-project/vllm) (recommended, via the [`vllm_evo2`](https://github.com/ArcInstitute/evo2-vllm) plugin) or on our reference [Vortex](https://github.com/Zymrael/vortex) implementation. See [Inference backends](#inference-backends). For training and finetuning, see the section [here](#training-and-finetuning).
+This repo is for running Evo 2 locally for inference or generation, on [vLLM](https://github.com/vllm-project/vllm) (recommended, via the [`evo2_flash`](https://github.com/evo-design/evo2_flash) plugin) or on our reference [Vortex](https://github.com/Zymrael/vortex) implementation. See [Inference backends](#inference-backends). For training and finetuning, see the section [here](#training-and-finetuning).
 You can run Evo 2 without any installation using the [Nvidia Hosted API](https://build.nvidia.com/arc/evo2-40b).
 You can also self-host an instance using Nvidia NIM. See the [Nvidia NIM](#nvidia-nim) section for more 
 information.
@@ -118,20 +118,19 @@ python -m evo2.test.test_evo2_generation --model_name evo2_7b
 
 ### Inference backends
 
-Evo 2 runs on two engines behind the same `Evo2` API. **vLLM is recommended** (via the [`vllm_evo2`](https://github.com/ArcInstitute/evo2-vllm) plugin; 2-30x faster on generation and scoring). **Vortex is still supported**, and is the only backend for the 40B models (on vLLM, use the 20B, which has equivalent performance with higher efficiency).
+Evo 2 runs on two engines behind the same `Evo2` API. **vLLM is recommended** (via the [`evo2_flash`](https://github.com/evo-design/evo2_flash) plugin; 2-30x faster on generation and scoring). **Vortex is still supported**, and is the only backend for the 40B models (on vLLM, use the 20B, which has equivalent performance with higher efficiency).
 
 The two stacks need different torch versions, so install each in its own environment. `Evo2(...)` uses vLLM when it is installed and vortex otherwise; pass `backend='vllm'` or `backend='vortex'` (or set `EVO2_BACKEND`) to choose explicitly. Each load prints the backend in use.
 
 **Install for vLLM** (Python 3.12, fresh environment):
 
 ```bash
-# On a CUDA 12 driver, first install vLLM 0.26.0's +cu129 wheel from its GitHub release
-# (the default PyPI wheel needs a CUDA 13 driver):
+# vLLM 0.26.0, CUDA 12.9 build: runs on CUDA 12 and CUDA 13 drivers (on ARM, use the aarch64
+# wheel from the same release). PyPI's default vllm build is CUDA 13 and cannot use the GPU on
+# a CUDA 12 driver; torchcodec is pinned because releases after 0.16 do not load with its torch.
 pip install "https://github.com/vllm-project/vllm/releases/download/v0.26.0/vllm-0.26.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl" \
-    --extra-index-url https://download.pytorch.org/whl/cu129
+    "torchcodec==0.16.0" --extra-index-url https://download.pytorch.org/whl/cu129
 pip install "evo2[vllm]"
-# Until vllm-evo2 is on PyPI, install the plugin first:
-#   pip install git+https://github.com/ArcInstitute/evo2-vllm@v0.1.0
 ```
 
 Verify with `python -m evo2.test.test_evo2 --model_name evo2_7b --backend vllm`. `Dockerfile.vllm` builds the same environment as a container.
@@ -144,7 +143,7 @@ model = Evo2('evo2_7b', backend='vllm', max_model_len=131072)   # engine options
 print(model.backend)
 ```
 
-On vLLM, checkpoints are downloaded and converted automatically by model name; `local_path=` takes a vortex `.pt` (converted once) or a converted directory. The usage examples below work unchanged on both backends. Small differences: `score_sequences` ignores `batch_size`; `generate` always batches, treats `temperature=0` as greedy and accepts `seed=`; `use_kernels` is vortex-only; `evo2_model.model` is vLLM's internal module, so use `forward(..., layer_names=[...])` (vortex layer names) rather than hooking it directly.
+On vLLM, converted checkpoints are downloaded automatically by model name; `local_path=` takes a vortex `.pt` (converted once) or a converted directory. The usage examples below work unchanged on both backends. Small differences: `score_sequences` ignores `batch_size`; `generate` always batches, treats `temperature=0` as greedy and accepts `seed=`; `use_kernels` is vortex-only; `evo2_model.model` is vLLM's internal module, so use `forward(..., layer_names=[...])` (vortex layer names) rather than hooking it directly.
 
 **Troubleshooting.** If FlashInfer's JIT fails with `cuda_runtime.h: No such file or directory`, point `CUDA_HOME` at a full CUDA toolkit (e.g. `export CUDA_HOME=/usr/local/cuda`).
 

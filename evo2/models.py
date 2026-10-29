@@ -38,13 +38,13 @@ class Evo2:
         Automatically downloads checkpoint from HuggingFace if it does not exist locally.
 
         backend selects the inference engine:
-          - 'auto' (default): vLLM if `vllm` and `vllm_evo2` are importable, else vortex.
+          - 'auto' (default): vLLM if `vllm` and `evo2_flash` are importable, else vortex.
             The EVO2_BACKEND environment variable overrides 'auto'.
           - 'vortex': the reference StripedHyena 2 implementation (vtx). Handles device
             placement itself and splits the model across multiple GPUs if available
             (Evo 2 40B needs several H100s). Select GPUs with CUDA_VISIBLE_DEVICES; do
             not call .to(device) manually.
-          - 'vllm': the vllm_evo2 plugin. One GPU per model. evo2_40b and
+          - 'vllm': the evo2_flash plugin. One GPU per model. evo2_40b and
             evo2_40b_base are not available on vLLM (use evo2_20b, or the vortex
             backend). Keyword arguments beyond those listed here go to the plugin's
             Evo2: fp8_mode, max_model_len, gpu_memory_utilization, kv_cache_dtype,
