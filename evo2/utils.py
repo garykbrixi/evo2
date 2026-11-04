@@ -1,3 +1,5 @@
+import os
+
 MODEL_NAMES = [
     'evo2_40b',
     'evo2_7b',
@@ -32,45 +34,113 @@ CONFIG_MAP = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Inference backends
+# ---------------------------------------------------------------------------
+
+BACKENDS = ('auto', 'vortex', 'vllm')
+BACKEND_ENV_VAR = 'EVO2_BACKEND'
+
+VLLM_INSTALL_HINT = (
+    "The vLLM backend needs its own Python environment (vLLM pins a newer torch than "
+    "the vortex stack). Install vLLM 0.26.0's CUDA 12.9 build, then evo2 with the vLLM extra:\n"
+    '    pip install "https://github.com/vllm-project/vllm/releases/download/v0.26.0/vllm-0.26.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl" \\\n'
+    '        "torchcodec==0.16.0" --extra-index-url https://download.pytorch.org/whl/cu129\n'
+    "    pip install 'evo2[vllm]'\n"
+    "See README.md, 'Inference backends'."
+)
+
+
+def vllm_backend_available() -> bool:
+    """True if both vLLM and the evo2_flash plugin can be imported.
+
+    Uses find_spec so that merely asking does not import vLLM (which is slow
+    and has side effects).
+    """
+    import importlib.util
+    return all(
+        importlib.util.find_spec(name) is not None
+        for name in ('vllm', 'evo2_flash')
+    )
+
+
+def _vllm_half_installed() -> str | None:
+    """Which half of the vLLM backend is installed without the other, if either."""
+    import importlib.util
+    have_vllm = importlib.util.find_spec('vllm') is not None
+    have_plugin = importlib.util.find_spec('evo2_flash') is not None
+    if have_plugin and not have_vllm:
+        return "evo2_flash is installed but vLLM is not"
+    if have_vllm and not have_plugin:
+        return "vLLM is installed but evo2_flash is not (install evo2 with the [vllm] extra)"
+    return None
+
+
+def resolve_backend(backend: str = 'auto') -> str:
+    """Return 'vortex' or 'vllm'.
+
+    'auto' (the default) picks vLLM when it is importable and vortex otherwise.
+    The two stacks cannot share an environment, so an importable vLLM means the
+    user built a vLLM environment on purpose. If only one half of the vLLM
+    backend (vLLM, or the evo2_flash plugin) is installed, 'auto' raises with the
+    install instructions instead of silently falling back to vortex. The EVO2_BACKEND environment
+    variable overrides 'auto' only; an explicit argument always wins.
+    """
+    if backend is None:
+        backend = 'auto'
+    backend = str(backend).lower()
+    if backend == 'auto':
+        env = os.environ.get(BACKEND_ENV_VAR, '').strip().lower()
+        if env:
+            backend = env
+    if backend not in BACKENDS:
+        raise ValueError(
+            f"Invalid backend {backend!r}. Should be one of: {', '.join(BACKENDS)}."
+        )
+    if backend == 'auto':
+        if vllm_backend_available():
+            return 'vllm'
+        half = _vllm_half_installed()
+        if half:
+            raise ImportError(
+                f"The vLLM backend is only partly installed: {half}.\n{VLLM_INSTALL_HINT}\n"
+                "To use vortex here instead, pass backend='vortex' (or set EVO2_BACKEND=vortex)."
+            )
+        return 'vortex'
+    if backend == 'vllm' and not vllm_backend_available():
+        raise ImportError(
+            f"backend='vllm' was requested but vLLM and/or evo2_flash are not installed.\n"
+            + VLLM_INSTALL_HINT
+        )
+    return backend
+
+
 def make_phylotag_from_gbif(
         species_name: str,
-) -> dict:
+        timeout: float = 30.0,
+) -> str:
     """
-    Returns phylogenetic tags for a given species, to get new tags not in the metadata
+    Returns the phylogenetic tag for a species (to get new tags not in the metadata),
+    e.g. '|D__ANIMALIA;P__CHORDATA;...;S__PHASCOLARCTOS CINEREUS|', from the GBIF
+    species API. Returns None (and prints a message) if GBIF has no match.
     """
+    import json
+    import urllib.parse
+    import urllib.request
 
-    import requests
-    def get_taxonomy_from_gbif(species_name):
-        url = f"https://api.gbif.org/v1/species/match?name={species_name}"
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            return {
-                "kingdom": data.get("kingdom"),
-                "phylum": data.get("phylum"),
-                "class": data.get("class"),
-                "order": data.get("order"),
-                "family": data.get("family"),
-                "genus": data.get("genus"),
-                "species": data.get("species")
-            }
-        else:
-            print(f"Could not find taxonomy for {species_name}")
+    url = "https://api.gbif.org/v1/species/match?" + urllib.parse.urlencode({"name": species_name})
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            data = json.load(response)
+    except Exception as e:  # network error, HTTP error, bad JSON
+        print(f"Could not find taxonomy for {species_name} ({e})")
+        return None
 
-    taxonomy = get_taxonomy_from_gbif(species_name)
-    if taxonomy:
-        phylo_tag = (
-        f'd__{taxonomy["kingdom"]};'
-        f'p__{taxonomy["phylum"]};'
-        f'c__{taxonomy["class"]};'
-        f'o__{taxonomy["order"]};'
-        f'f__{taxonomy["family"]};'
-        f'g__{taxonomy["genus"]};'
-        f's__{taxonomy["species"]}'
-    ).upper()
-        phylo_tag = '|'+phylo_tag+'|'
-    else:
+    ranks = ("kingdom", "phylum", "class", "order", "family", "genus", "species")
+    if not data.get("kingdom"):
         print(f"Could not find taxonomy for {species_name}")
-
-    return phylo_tag.upper()
-
+        return None
+    phylo_tag = ";".join(f"{rank[0]}__{data.get(rank)}" for rank in ranks)
+    # GBIF's kingdom is the tag's domain field ('d__'), as before.
+    phylo_tag = "d" + phylo_tag[1:]
+    return ("|" + phylo_tag + "|").upper()
